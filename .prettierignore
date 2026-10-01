@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+automation/*.json
+docs/SPEC.md
+docs/WORKFLOW.md
+docs/PROMPT_INICIAL.md
