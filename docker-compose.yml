@@ -1,0 +1,44 @@
+# Entorno local de AgendIA. Arranque: docker compose up -d
+# Las variables salen de .env (copia de .env.example).
+name: agendia
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Copia .env.example a .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copia .env.example a .env}
+      POSTGRES_DB: ${POSTGRES_DB:?Copia .env.example a .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:2.41.5
+    restart: unless-stopped
+    environment:
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Madrid}
+      TZ: ${GENERIC_TIMEZONE:-Europe/Madrid}
+      N8N_PORT: 5678
+    ports:
+      - "127.0.0.1:${N8N_PORT:-5678}:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  postgres_data:
+  n8n_data:
