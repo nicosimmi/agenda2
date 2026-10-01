@@ -40,7 +40,7 @@ docker compose up -d
 
 | Servicio   | URL / puerto          |
 | ---------- | --------------------- |
-| PostgreSQL | `localhost:5432`      |
+| PostgreSQL | `localhost:5433`      |
 | Mailpit    | http://localhost:8025 |
 | n8n        | http://localhost:5678 |
 
