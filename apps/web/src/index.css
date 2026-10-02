@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Kulim Park";
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/kulim-park-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Kulim Park";
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/kulim-park-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Kulim Park";
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/kulim-park-700.woff2") format("woff2");
+}
+
+/* Tokens de la dirección visual (DECISIONS F3-6). Un solo sitio para la paleta. */
+@theme {
+  --font-sans: "Kulim Park", ui-sans-serif, system-ui, sans-serif;
+  --color-cream: #faf7f0;
+  --color-card: #ffffff;
+  --color-ink: #1c1917;
+  --color-muted: #78716c;
+  --color-gold: #c89b3c;
+  --color-gold-dark: #a67c22;
+}
+
+body {
+  @apply bg-cream text-ink font-sans;
+}
