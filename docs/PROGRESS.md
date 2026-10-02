@@ -24,6 +24,14 @@
 - [ ] `pnpm check` + push + CI verde
 - [ ] CHECKPOINT, notas de entrevista y revisión cruzada con Codex (recomendada)
 
+## Revisión de la Fase 1 (Claude, en lugar de Codex)
+
+Sin hallazgos graves. Corregido: huecos duplicados si dos franjas de un profesional se solapan (test añadido). Pendiente para fases posteriores:
+
+- Fase 4 (media): una reserva `pending` caducada sigue bloqueando el hueco en la restricción de exclusión hasta que pase a `expired`. Al reservar, expirar las propuestas caducadas dentro de la misma transacción antes de insertar.
+- Fase 3/4 (baja): validar con Zod que `min_notice_min`, `max_horizon_days` y `cancel_limit_hours` no sean negativos, que el rango de fechas pedido a la disponibilidad sea corto, y avisar si las franjas de un profesional se solapan.
+- Fase 4 (baja): traducir `23P01` a un 409 claro.
+
 ## Comandos útiles
 
 - Levantar: `docker compose up -d` (tras `cp .env.example .env`)
