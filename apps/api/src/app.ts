@@ -33,12 +33,21 @@ export interface AppConfig {
   webOrigins: string[];
   /** Cookie solo por HTTPS; en producción, siempre. */
   secureCookies: boolean;
+  /**
+   * IP o CIDR de los proxies inversos de confianza delante de la API (vacío = ninguno). Sin esto,
+   * detrás de un proxy todas las peticiones tendrían su IP y el rate limiting sería global.
+   * No se usa un número de saltos: Fastify lo desaconseja porque permite falsear X-Forwarded-For.
+   */
+  trustedProxies: string[];
 }
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 export async function buildApp(db: Db, config: AppConfig) {
-  const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
+  const app = Fastify({
+    logger: process.env.NODE_ENV !== "test",
+    trustProxy: config.trustedProxies.length > 0 ? config.trustedProxies : false,
+  });
   app.decorate("db", db);
   app.decorate("config", config);
   app.decorate("routeList", [] as string[]);

@@ -29,7 +29,7 @@ interface RouteSpec {
   access: Access;
   /** URL de ejemplo con los parámetros rellenos (para la matriz de roles). */
   sample?: (f: Fixture) => string;
-  /** Obligatorio en rutas de cliente y de negocio: prueba que no se ve nada ajeno. */
+  /** Obligatorio en toda ruta con sesión salvo las de administrador: prueba que no se ve nada ajeno. */
   isolation?: (f: Fixture) => Promise<void>;
 }
 
@@ -41,7 +41,13 @@ const ROUTES: Record<string, RouteSpec> = {
   "POST /auth/register": { access: "public" },
   "POST /auth/login": { access: "public" },
   "POST /auth/logout": { access: "public" },
-  "GET /auth/me": { access: "authenticated" },
+  "GET /auth/me": {
+    access: "authenticated",
+    isolation: async (f) => {
+      expect((await get("/auth/me", f.customer1)).email).toBe("c1@cliente.test");
+      expect((await get("/auth/me", f.ownerB)).email).toBe("b@negocio.test");
+    },
+  },
 
   "GET /me/bookings": {
     access: "customer",
@@ -180,9 +186,9 @@ describe("tabla de rutas", () => {
     expect([...t.app.routeList].sort()).toEqual(Object.keys(ROUTES).sort());
   });
 
-  it("toda ruta de cliente o de negocio tiene su test de aislamiento", () => {
+  it("toda ruta con sesión (salvo las de administrador) tiene su test de aislamiento", () => {
     const missing = Object.entries(ROUTES)
-      .filter(([, s]) => (s.access === "customer" || s.access === "business_owner") && !s.isolation)
+      .filter(([, s]) => s.access !== "public" && s.access !== "platform_admin" && !s.isolation)
       .map(([route]) => route);
     expect(missing).toEqual([]);
   });

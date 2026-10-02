@@ -1,7 +1,7 @@
 // Sesiones propias: un token aleatorio en una cookie HttpOnly y su hash SHA-256 en la tabla sessions.
 // Cerrar sesión borra la fila, así que la sesión se invalida al momento (con un JWT no se podría).
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, lt } from "drizzle-orm";
 import type { Db } from "./db/client.ts";
 import { sessions, users } from "./db/schema.ts";
 
@@ -30,6 +30,11 @@ export async function findSessionUser(db: Db, token: string): Promise<SessionUse
     .innerJoin(users, eq(users.id, sessions.userId))
     .where(and(eq(sessions.tokenHash, hashToken(token)), gt(sessions.expiresAt, new Date())));
   return row ?? null;
+}
+
+// ponytail: limpieza al hacer login; un job periódico si la tabla crece mucho.
+export async function deleteExpiredSessions(db: Db): Promise<void> {
+  await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
 }
 
 export async function deleteSession(db: Db, token: string): Promise<void> {

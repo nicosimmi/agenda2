@@ -21,7 +21,11 @@ export interface TestContext {
 
 export async function createTestApp(): Promise<TestContext> {
   const { db, pool } = createDb(await prepareTestDatabase());
-  const app = await buildApp(db, { webOrigins: [WEB_ORIGIN], secureCookies: false });
+  const app = await buildApp(db, {
+    webOrigins: [WEB_ORIGIN],
+    secureCookies: false,
+    trustedProxies: [],
+  });
   await app.ready();
   return {
     app,

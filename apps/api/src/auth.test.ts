@@ -170,6 +170,33 @@ describe("login y logout", () => {
     expect(last).toBe(429);
   });
 
+  it("el login rota la sesión: la cookie anterior deja de valer", async () => {
+    const { cookies } = await userWithSession(t.db, "customer", "ana@ejemplo.com");
+    const res = await t.app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { email: "ana@ejemplo.com", password: PASSWORD },
+      cookies,
+      headers: { origin: WEB_ORIGIN },
+      remoteAddress: freshIp(),
+    });
+    expect(res.statusCode).toBe(200);
+    expect((await t.app.inject({ url: "/auth/me", cookies })).statusCode).toBe(401);
+    expect(await t.db.select().from(sessions)).toHaveLength(1);
+  });
+
+  it("el login también se limita por cuenta aunque cambie la IP", async () => {
+    let last = 0;
+    for (let i = 0; i < 11; i++) {
+      last = (await post("/auth/login", { email: "objetivo@ejemplo.com", password: "x" }))
+        .statusCode;
+    }
+    expect(last).toBe(429);
+    // Otra cuenta desde una IP nueva no se ve afectada.
+    const other = await post("/auth/login", { email: "otra@ejemplo.com", password: "x" });
+    expect(other.statusCode).toBe(401);
+  });
+
   it("logout borra la sesión en la base de datos", async () => {
     const { cookies } = await userWithSession(t.db, "customer", "ana@ejemplo.com");
     const res = await t.app.inject({

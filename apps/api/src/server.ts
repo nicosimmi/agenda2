@@ -1,9 +1,16 @@
 import { buildApp } from "./app.ts";
 import { createDb } from "./db/client.ts";
 
+const list = (value = "") =>
+  value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
 const { db } = createDb();
 const app = await buildApp(db, {
-  webOrigins: (process.env.WEB_ORIGIN ?? "http://localhost:5173").split(","),
+  webOrigins: list(process.env.WEB_ORIGIN ?? "http://localhost:5173"),
+  trustedProxies: list(process.env.TRUSTED_PROXIES),
   secureCookies: process.env.NODE_ENV === "production",
 });
 await app.listen({

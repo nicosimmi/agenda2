@@ -1,12 +1,19 @@
 import { randomBytes } from "node:crypto";
 import { loginSchema, registerSchema, type Me } from "@agendia/shared";
+import { normalizeIP } from "@fastify/rate-limit";
 import { hash, verify } from "@node-rs/argon2";
 import { eq } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { businessMembers, businesses, categories, users } from "../db/schema.ts";
-import { AppError, pgErrorCode } from "../errors.ts";
+import { AppError, pgConstraint, pgErrorCode } from "../errors.ts";
 import { requireRole, userOf } from "../guards.ts";
-import { SESSION_COOKIE, SESSION_TTL_MS, createSession, deleteSession } from "../session.ts";
+import {
+  SESSION_COOKIE,
+  SESSION_TTL_MS,
+  createSession,
+  deleteExpiredSessions,
+  deleteSession,
+} from "../session.ts";
 
 // Si el email no existe se verifica igualmente contra este hash, para que el tiempo de
 // respuesta no revele qué emails están registrados.
@@ -30,7 +37,17 @@ const isBusinessSignup = (body: unknown) =>
 export async function authRoutes(app: FastifyInstance) {
   const { db, config } = app;
 
-  async function startSession(reply: FastifyReply, userId: string) {
+  // Además del límite por IP, uno por cuenta: frena la fuerza bruta repartida entre muchas IPs.
+  const loginPerAccount = app.createRateLimit({
+    max: 10,
+    timeWindow: "1 hour",
+    keyGenerator: (req) => `login:${loginSchema.safeParse(req.body).data?.email ?? ""}`,
+  });
+
+  async function startSession(req: FastifyRequest, reply: FastifyReply, userId: string) {
+    // Rotación: la sesión que trajera la petición deja de valer al abrir una nueva.
+    const previous = req.cookies[SESSION_COOKIE];
+    if (previous) await deleteSession(db, previous);
     const token = await createSession(db, userId);
     reply.setCookie(SESSION_COOKIE, token, {
       httpOnly: true,
@@ -50,7 +67,7 @@ export async function authRoutes(app: FastifyInstance) {
           hook: "preHandler",
           timeWindow: "1 day",
           keyGenerator: (req) =>
-            `${req.ip}:${isBusinessSignup(req.body) ? "business" : "customer"}`,
+            `${normalizeIP(req.ip)}:${isBusinessSignup(req.body) ? "business" : "customer"}`,
           max: (req) => (isBusinessSignup(req.body) ? 3 : 20),
         },
       },
@@ -85,13 +102,13 @@ export async function authRoutes(app: FastifyInstance) {
           return user!.id;
         })
         .catch((error: unknown) => {
-          if (pgErrorCode(error) === "23505") {
+          if (pgErrorCode(error) === "23505" && pgConstraint(error) === "users_email_unique") {
             throw new AppError(409, "CONFLICT", "Ya existe una cuenta con ese email");
           }
           throw error;
         });
 
-      await startSession(reply, userId);
+      await startSession(req, reply, userId);
       const me: Me = { id: userId, email: input.email, name: input.name, role: input.role };
       return reply.status(201).send(me);
     },
@@ -102,11 +119,21 @@ export async function authRoutes(app: FastifyInstance) {
     { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } },
     async (req, reply) => {
       const input = loginSchema.parse(req.body);
+      // Ojo: en este plugin isAllowed significa "está en la allowList", no "queda cupo".
+      const perAccount = await loginPerAccount(req);
+      if (!perAccount.isAllowed && perAccount.isExceeded) {
+        throw new AppError(
+          429,
+          "RATE_LIMITED",
+          "Demasiados intentos con esta cuenta. Prueba más tarde",
+        );
+      }
       const [user] = await db.select().from(users).where(eq(users.email, input.email));
       const ok = await verify(user?.passwordHash ?? (await dummyHash), input.password);
       if (!user || !ok) throw new AppError(401, "UNAUTHORIZED", "Email o contraseña incorrectos");
 
-      await startSession(reply, user.id);
+      await startSession(req, reply, user.id);
+      await deleteExpiredSessions(db);
       return { id: user.id, email: user.email, name: user.name, role: user.role } satisfies Me;
     },
   );
