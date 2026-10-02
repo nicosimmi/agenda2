@@ -6,3 +6,4 @@ automation/*.json
 docs/SPEC.md
 docs/WORKFLOW.md
 docs/PROMPT_INICIAL.md
+apps/api/drizzle/meta/
