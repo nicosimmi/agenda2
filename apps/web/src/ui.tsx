@@ -1,7 +1,8 @@
+import { motion } from "motion/react";
 import { useState, type ComponentProps, type ReactNode } from "react";
 
 export const buttonClass =
-  "bg-gold text-ink hover:bg-gold-dark rounded-md px-4 py-2 font-semibold transition-colors disabled:opacity-50";
+  "bg-gold text-ink hover:bg-gold-dark rounded-md px-4 py-2 font-semibold shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-95 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-sm";
 
 export const linkButton = "text-gold-dark font-semibold underline";
 
@@ -20,26 +21,51 @@ export function Field({ label, ...props }: { label: string } & ComponentProps<"i
 export function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
     <main className="mx-auto max-w-md p-6 pt-16">
-      <h1 className="mb-6 text-3xl font-bold">{title}</h1>
-      <div className="space-y-4 rounded-lg bg-white p-6 shadow-sm">{children}</div>
+      <motion.h1
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-6 text-3xl font-bold"
+      >
+        {title}
+      </motion.h1>
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.1, duration: 0.5 }}
+        className="space-y-4 rounded-lg bg-white p-6 shadow-sm"
+      >
+        {children}
+      </motion.div>
     </main>
   );
 }
 
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="space-y-4 rounded-lg bg-white p-6 shadow-sm">
+    <motion.section
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ duration: 0.45, ease: "easeOut" }}
+      className="space-y-4 rounded-xl bg-white p-6 shadow-sm"
+    >
       <h2 className="text-xl font-bold">{title}</h2>
       {children}
-    </section>
+    </motion.section>
   );
 }
 
 export function FormError({ message }: { message: string | null | undefined }) {
   return message ? (
-    <p role="alert" className="text-sm font-semibold text-red-700">
+    <motion.p
+      role="alert"
+      initial={{ x: -8, opacity: 0 }}
+      animate={{ x: [0, -6, 6, -3, 0], opacity: 1 }}
+      transition={{ duration: 0.4 }}
+      className="text-sm font-semibold text-red-700"
+    >
       {message}
-    </p>
+    </motion.p>
   ) : null;
 }
 

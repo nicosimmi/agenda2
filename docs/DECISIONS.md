@@ -176,3 +176,10 @@ Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. L
 
 - **Contexto:** la cuenta es gratuita (2 descargas de código al día, sin generación con IA) y sus comandos de instalación exigen shadcn y llevan la API key en la URL.
 - **Decisión:** el plugin y el MCP se usan para ver previews y vídeos como referencia. No se descarga código ni se instala shadcn; los componentes se escriben a mano en el repo.
+
+## F3-9. Portada y panel animados con `motion`
+
+- **Contexto:** al ver el panel en el navegador, el desarrollador lo encontró plano y pidió animaciones de scroll, botones, banners e imágenes, inspiradas en 21st.dev.
+- **Decisión:** se instala `motion` 14.0.0 (aprobada en F3-7) y se adelanta una portada pública en `/` (hero con parallax, cinta de categorías, tarjetas y pasos con aparición al hacer scroll, banner final). El panel gana transiciones entre páginas, subrayado animado en el menú, banner con anillo de progreso y botones con relieve. 21st.dev sigue como inspiración (F3-8): los componentes se escriben a mano, sin shadcn ni descargas. Las imágenes son maquetas hechas con HTML y SVG, sin fotos ni cifras inventadas.
+- **Accesibilidad:** `MotionConfig reducedMotion="user"` desactiva el movimiento si el sistema lo pide.
+- **Consecuencia:** la portada, prevista para la Fase 4, queda hecha; la Fase 4 solo añade buscador y fichas.

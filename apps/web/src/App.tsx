@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { Landing } from "./pages/Landing.tsx";
 import { Login } from "./pages/Login.tsx";
 import { Panel } from "./pages/Panel.tsx";
 import { Register } from "./pages/Register.tsx";
@@ -11,6 +12,7 @@ import { Servicios } from "./pages/panel/Servicios.tsx";
 export function App() {
   return (
     <Routes>
+      <Route path="/" element={<Landing />} />
       <Route path="/entrar" element={<Login />} />
       <Route path="/alta" element={<Register />} />
       <Route path="/panel" element={<Panel />}>
