@@ -1,7 +1,7 @@
 # PROGRESS
 
 **Última actualización:** 2026-10-02 · Claude Code (Opus 5.5)
-**Fase actual:** 1 — Datos multi-negocio y dominio **Estado:** terminada en local; pendiente de push, CI y confirmación
+**Fase actual:** 1 — Datos multi-negocio y dominio **Estado:** terminada (merge a `main`, etiqueta `fase-1`, CI verde). Siguiente: Fase 2 con Opus 5.5
 
 ## Hecho
 
