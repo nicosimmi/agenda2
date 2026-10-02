@@ -316,3 +316,18 @@ export const idempotencyKeys = pgTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.key] })],
 );
+
+// Sesiones de usuario (cookie HttpOnly). Solo se guarda el hash SHA-256 del token:
+// si se filtra la base de datos, los tokens no sirven para entrar.
+export const sessions = pgTable(
+  "sessions",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: instant("expires_at").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("sessions_user_idx").on(t.userId)],
+);

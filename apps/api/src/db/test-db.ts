@@ -30,5 +30,5 @@ export async function truncateAll(pool: pg.Pool): Promise<void> {
   await pool.query(`
     TRUNCATE users, categories, businesses, business_members, services, staff, staff_services,
       working_hours, time_off, bookings, faq_entries, agent_events, outbox_events,
-      idempotency_keys CASCADE`);
+      idempotency_keys, sessions CASCADE`);
 }
