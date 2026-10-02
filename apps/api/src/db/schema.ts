@@ -106,7 +106,11 @@ export const businessMembers = pgTable(
       .references(() => businesses.id, { onDelete: "cascade" }),
     role: memberRole("role").notNull().default("owner"),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.businessId] })],
+  (t) => [
+    primaryKey({ columns: [t.userId, t.businessId] }),
+    // D6: un propietario, un negocio. Se quita si en el futuro hay varios negocios por usuario.
+    unique("business_members_user_unique").on(t.userId),
+  ],
 );
 
 // --- Tablas de negocio ---
