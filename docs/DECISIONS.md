@@ -47,3 +47,9 @@ Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. L
 - **Contexto:** la máquina del desarrollador tiene un PostgreSQL 16 instalado como servicio de Windows que ocupa el 5432; Docker no podía publicar ese puerto.
 - **Decisión:** el contenedor sigue usando 5432 internamente y se publica en `127.0.0.1:5433` (`POSTGRES_PORT`). No se toca el servicio local.
 - **Alternativas:** parar el servicio de Windows (invasivo, puede usarse para otros proyectos).
+
+## F0-10. Las notas de entrevista no se versionan
+
+- **Contexto:** `docs/INTERVIEW_NOTES.md` son notas personales de preparación, no documentación del proyecto.
+- **Decisión:** el fichero existe solo en local y está en `.gitignore`. WORKFLOW §11 sigue aplicando: se mantiene al cerrar cada fase, pero no se sube.
+- **Alternativas:** guardarlo en un repositorio privado aparte.

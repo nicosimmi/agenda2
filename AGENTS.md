@@ -45,7 +45,7 @@ Usa **PowerShell** para pnpm en Windows (el shim de corepack falla en Git Bash).
 9. **Consulta la documentación oficial vigente** (MCP SDK, API de Anthropic, Fastify, Drizzle, Playwright). No inventes versiones, APIs ni nombres de modelos.
 10. **Secretos:** nunca en el repositorio; `.env.example` documentado. `ANTHROPIC_API_KEY` solo en `.env` local.
 11. **Ningún test automático llama a un LLM real.**
-12. Mantén `docs/PROGRESS.md` y `docs/INTERVIEW_NOTES.md` al cerrar cada sesión y cada fase.
+12. Mantén `docs/PROGRESS.md` y `docs/INTERVIEW_NOTES.md` al cerrar cada sesión y cada fase. Las notas de entrevista son solo locales (`.gitignore`): nunca las añadas a Git.
 
 ## Reglas de oro
 

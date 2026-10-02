@@ -13,3 +13,6 @@ coverage/
 pnpm-debug.log*
 playwright-report/
 test-results/
+
+# Notas personales de preparación de entrevistas (solo en local)
+docs/INTERVIEW_NOTES.md
