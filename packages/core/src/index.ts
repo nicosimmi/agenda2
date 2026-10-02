@@ -1,2 +1,3 @@
-// Dominio puro (sin I/O): motor de disponibilidad y reglas. Se rellena en la Fase 1.
-export const CORE_PACKAGE = "@agendia/core";
+// Dominio puro (sin I/O): motor de disponibilidad y utilidades de zona horaria.
+export * from "./availability.ts";
+export { localToUtc, isoWeekday } from "./time.ts";
