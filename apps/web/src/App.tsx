@@ -1,20 +1,15 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { Login } from "./pages/Login.tsx";
+import { Panel } from "./pages/Panel.tsx";
+import { Register } from "./pages/Register.tsx";
 
 export function App() {
   return (
     <Routes>
-      <Route
-        path="*"
-        element={
-          <main className="mx-auto max-w-md p-8">
-            <h1 className="text-3xl font-bold">AgendIA</h1>
-            <p className="text-muted mt-2">Panel del negocio</p>
-            <button className="bg-gold text-ink hover:bg-gold-dark mt-6 rounded-md px-4 py-2 font-semibold">
-              Empezar
-            </button>
-          </main>
-        }
-      />
+      <Route path="/entrar" element={<Login />} />
+      <Route path="/alta" element={<Register />} />
+      <Route path="/panel" element={<Panel />} />
+      <Route path="*" element={<Navigate to="/panel" replace />} />
     </Routes>
   );
 }
