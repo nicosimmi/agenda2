@@ -14,7 +14,7 @@
 
 ## En curso
 
-- Siguiente paso: `apps/api/src/db/seed.ts` (script `pnpm db:seed`). Categorías del SPEC §5, 6–8 negocios de categorías y ciudades distintas (Córdoba, Sevilla, Málaga, Madrid) con servicios, profesionales, `staff_services` y horarios, el negocio "malicioso" en `draft` (para evals, Fase 8), y cuentas demo de cliente y negocio con hash `@node-rs/argon2` (contraseñas solo de demo, documentadas en el README). Debe poder repetirse sin fallar (vaciar las tablas antes o usar upsert).
+- Seed hecho. Queda push, CI y checkpoint.
 - Modelo recomendado para el seed: Sonnet 5.5.
 
 ## Pendiente de la fase

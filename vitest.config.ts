@@ -10,5 +10,7 @@ export default defineConfig({
   test: {
     include: ["{apps,packages,evals}/**/*.test.ts"],
     passWithNoTests: false,
+    // Los tests de integración comparten la base agendia_test y la vacían: van de uno en uno.
+    fileParallelism: false,
   },
 });
