@@ -159,3 +159,20 @@ Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. L
 ## F3-5. Recortes de alcance de la Fase 3
 
 - **Decisión:** el CRUD de FAQ (SPEC §8) y mover una reserva quedan para cuando los use alguien: la FAQ, el agente (Fase 6); mover, el flujo del cliente (Fase 4). Cancelar y marcar `completed`/`no_show` sí están. El registro del agente también espera a la Fase 6.
+
+## F3-6. Dirección visual: crema, dorado y carbón, con Kulim Park
+
+- **Paleta (elegida por el desarrollador):** `#FAF7F0` fondo · `#FFFFFF` tarjetas y formularios · `#1C1917` texto, títulos y secciones oscuras · `#78716C` texto secundario y bordes · `#C89B3C` acento · `#A67C22` hover y enlaces. Van como variables CSS y tokens de Tailwind en un solo sitio.
+- **Contraste (calculado):** el botón dorado lleva texto `#1C1917` (6,9:1); con texto blanco no llega (2,6:1). `#C89B3C` no se usa como color de texto sobre crema (2,4:1). `#A67C22` solo en títulos grandes y enlaces (3,5:1). `#78716C` sobre crema queda en el límite (4,5:1), así que el texto secundario va mejor sobre blanco.
+- **Fuente:** Kulim Park (Google Fonts, licencia OFL), con los archivos `woff2` en `apps/web/public/fonts` y `@font-face`. Sin dependencia y sin peticiones a Google, que en la UE obligaría a avisar al usuario.
+- **Alcance:** el panel usa paleta y fuente con transiciones sutiles. Las animaciones de scroll (referencias: jeskojets.com y tasteskill.dev) van en la parte pública, en la Fase 4 junto con el buscador. La portada animada no se hace en la Fase 3.
+
+## F3-7. `motion` aprobado para la parte pública
+
+- **Decisión:** el desarrollador aprueba añadir `motion` (la librería de animación de React, antes Framer Motion) para las animaciones de scroll de la Fase 4. No se instala hasta que haya una pantalla que la use; entonces se comprueba la versión vigente. El panel no la necesita.
+- **Alternativa descartada:** CSS e `IntersectionObserver` sin librería (cubren apariciones y parallax ligero, pero no efectos 3D ni de hero por scroll). GSAP: más pesada y con licencia propia.
+
+## F3-8. 21st.dev solo como inspiración
+
+- **Contexto:** la cuenta es gratuita (2 descargas de código al día, sin generación con IA) y sus comandos de instalación exigen shadcn y llevan la API key en la URL.
+- **Decisión:** el plugin y el MCP se usan para ver previews y vídeos como referencia. No se descarga código ni se instala shadcn; los componentes se escriben a mano en el repo.

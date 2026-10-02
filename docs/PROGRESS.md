@@ -19,7 +19,8 @@
 ## En curso (Fase 3)
 
 - Tanda 1 hecha: perfil (`PATCH`), servicios, profesionales (con `serviceIds`), horarios semanales (con avisos de solape), ausencias, lista de comprobación, publicar/despublicar, agenda con filtro por profesional, reserva manual y cambio de estado. Código en `apps/api/src/panel.ts` y `routes/business.ts`; esquemas en `packages/shared`. 160 tests en verde (`pnpm check`). Decisiones F3-1 a F3-5.
-- Tanda 2, siguiente paso: montar Vite + React + TS + Tailwind en `apps/web` (proxy a la API), añadir `react-router-dom` (aprobado), alta por pasos, pantallas del panel y un E2E de Playwright (alta → publicar → ver agenda). Después: README, INTERVIEW_NOTES, CHECKPOINT y merge.
+- Dirección visual decidida (DECISIONS F3-6 a F3-8): paleta crema/dorado/carbón, Kulim Park autoalojada, `motion` solo para la Fase 4. Plugin y MCP de 21st.dev conectados (solo inspiración).
+- Tanda 2, siguiente paso: montar Vite + React + TS + Tailwind en `apps/web` con los tokens de F3-6 y la fuente en `public/fonts` (proxy a la API), añadir `react-router-dom` (aprobado), alta por pasos, pantallas del panel y un E2E de Playwright (alta → publicar → ver agenda). Después: README, INTERVIEW_NOTES, CHECKPOINT y merge.
 
 ## Pendiente para fases posteriores
 
