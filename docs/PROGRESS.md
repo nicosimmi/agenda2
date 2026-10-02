@@ -1,7 +1,7 @@
 # PROGRESS
 
 **Última actualización:** 2026-10-02 · Claude Code (Opus 5.5)
-**Fase actual:** 2 — Auth, roles y aislamiento **Estado:** terminada en la rama `fase-2/auth-aislamiento`, pendiente de confirmación para merge a `main` y etiqueta `fase-2`. Siguiente: Fase 3 (panel del negocio) con Sonnet 5.5.
+**Fase actual:** 2 — Auth, roles y aislamiento **Estado:** terminada (merge a `main`, etiqueta `fase-2`, CI verde). Siguiente: Fase 3 (panel del negocio) con Sonnet 5.5.
 
 ## Hecho
 
