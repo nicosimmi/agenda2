@@ -53,3 +53,38 @@ Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. L
 - **Contexto:** `docs/INTERVIEW_NOTES.md` son notas personales de preparación, no documentación del proyecto.
 - **Decisión:** el fichero existe solo en local y está en `.gitignore`. WORKFLOW §11 sigue aplicando: se mantiene al cerrar cada fase, pero no se sube.
 - **Alternativas:** guardarlo en un repositorio privado aparte.
+
+## F1-1. Driver `pg`, TypeScript con Node 24 nativo y `@node-rs/argon2`
+
+- **Decisión:** `pg` (node-postgres) como driver de Drizzle. Los scripts se ejecutan con `node` sin compilar: Node 24 quita los tipos al cargar. Por eso los imports llevan extensión `.ts` (`allowImportingTsExtensions`) y `erasableSyntaxOnly` prohíbe la sintaxis que Node no sabe quitar (`enum`, `namespace`). Para las contraseñas, `@node-rs/argon2`, que trae binarios precompilados y no necesita compilar nada en Windows.
+- **Alternativas:** `postgres` (postgres.js); `tsx` para ejecutar TypeScript; `argon2` (node-argon2).
+
+## F1-2. Zonas horarias con `Intl`, sin librería
+
+- **Contexto:** los horarios se guardan en hora local del negocio y las reservas en UTC. Hay que convertir de una a otra respetando los cambios de hora.
+- **Decisión:** `packages/core/src/time.ts` calcula el desfase con `Intl.DateTimeFormat`. Una hora que no existe (el salto de primavera) se desplaza hacia delante. Una hora que se repite (otoño) se interpreta como la segunda vez que ocurre.
+- **Alternativas:** Luxon o date-fns-tz (otra dependencia más); `Temporal` (Node 24 aún no lo trae sin flag).
+
+## F1-3. `bookings.ends_at` incluye el buffer del servicio
+
+- **Contexto:** el buffer (tiempo de limpieza o preparación) también ocupa al profesional.
+- **Decisión:** `ends_at = starts_at + duración + buffer`, es decir, el momento en que el profesional vuelve a estar libre. Así la restricción de exclusión protege también el buffer y el motor de disponibilidad no necesita conocer el servicio de cada reserva. Para mostrar la hora de fin al cliente se resta el buffer.
+- **Alternativas:** guardar solo la duración y aplicar el buffer al calcular (la base de datos no lo protegería); una columna `blocked_until` aparte.
+
+## F1-4. Tests de integración en una base `agendia_test`
+
+- **Decisión:** los tests que tocan Postgres crean (si no existe) y migran `agendia_test` en el mismo contenedor, y vacían las tablas antes de cada test. Los datos del seed de desarrollo no se tocan. En local hace falta `docker compose up -d`. En CI, un servicio de Postgres y `DATABASE_URL`.
+- **Alternativas:** Testcontainers (otra dependencia); saltarse los tests si no hay base de datos (un fallo silencioso).
+
+## F1-5. `search_vector` con trigger
+
+- **Decisión:** un trigger `BEFORE INSERT OR UPDATE` calcula el vector a partir del nombre, la categoría, la ciudad y la descripción, sin tildes. No puede ser una columna generada porque `unaccent` no es `IMMUTABLE` y la categoría está en otra tabla. Para los índices se usa `f_unaccent`, un envoltorio inmutable.
+- **Limitación:** si se renombra una categoría, los vectores no se recalculan. Las categorías son fijas (seed), así que no se cubre.
+
+## F1-6. Clave de `idempotency_keys` = `(user_id, key)`
+
+- **Decisión:** la misma clave enviada por dos usuarios distintos no colisiona ni devuelve la respuesta del otro.
+
+## F1-7. Código de reserva
+
+- **Decisión:** 10 caracteres de un alfabeto sin caracteres ambiguos (sin 0/O ni 1/I/L), generados con `crypto.randomInt`, con unos 8·10¹⁴ valores posibles. La unicidad la garantiza la base de datos (`UNIQUE`).
