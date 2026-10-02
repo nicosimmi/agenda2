@@ -20,7 +20,7 @@
 
 - Tanda 1 hecha: perfil (`PATCH`), servicios, profesionales (con `serviceIds`), horarios semanales (con avisos de solape), ausencias, lista de comprobación, publicar/despublicar, agenda con filtro por profesional, reserva manual y cambio de estado. Código en `apps/api/src/panel.ts` y `routes/business.ts`; esquemas en `packages/shared`. 160 tests en verde (`pnpm check`). Decisiones F3-1 a F3-5.
 - Dirección visual decidida (DECISIONS F3-6 a F3-8): paleta crema/dorado/carbón, Kulim Park autoalojada, `motion` solo para la Fase 4. Plugin y MCP de 21st.dev conectados (solo inspiración).
-- Tanda 2, bloque (a) hecho: `apps/web` montado (Vite + React + Tailwind v4, tokens de F3-6, Kulim Park en `public/fonts`, proxy `/api` → API, `react-router-dom`, `src/api.ts`). Siguiente: alta por pasos, pantallas del panel y un E2E de Playwright (alta → publicar → ver agenda). Después: README, INTERVIEW_NOTES, CHECKPOINT y merge.
+- Tanda 2, bloque (a) hecho: `apps/web` montado (Vite + React + Tailwind v4, tokens de F3-6, Kulim Park en `public/fonts`, proxy `/api` → API, `react-router-dom`, `src/api.ts`). Hecho también: acceso y alta en dos pasos, y bloque (b): panel con Inicio (lista y publicar), Perfil, Servicios, Equipo (servicios y horario semanal) y Agenda (filtro, reserva manual, estados). Falta: ausencias en la interfaz, bloque (c) E2E con Playwright, pantallas del panel y un E2E de Playwright (alta → publicar → ver agenda). Después: README, INTERVIEW_NOTES, CHECKPOINT y merge.
 
 ## Pendiente para fases posteriores
 

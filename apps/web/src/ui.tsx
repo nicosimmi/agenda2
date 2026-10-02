@@ -1,7 +1,9 @@
-import type { ComponentProps, ReactNode } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 
 export const buttonClass =
   "bg-gold text-ink hover:bg-gold-dark rounded-md px-4 py-2 font-semibold transition-colors disabled:opacity-50";
+
+export const linkButton = "text-gold-dark font-semibold underline";
 
 export const inputClass =
   "border-muted focus:border-gold-dark focus:ring-gold mt-1 block w-full rounded-md border bg-white px-3 py-2 focus:ring-2 focus:outline-none";
@@ -24,10 +26,35 @@ export function Card({ title, children }: { title: string; children: ReactNode }
   );
 }
 
-export function FormError({ message }: { message: string | null }) {
+export function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="space-y-4 rounded-lg bg-white p-6 shadow-sm">
+      <h2 className="text-xl font-bold">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+export function FormError({ message }: { message: string | null | undefined }) {
   return message ? (
     <p role="alert" className="text-sm font-semibold text-red-700">
       {message}
     </p>
   ) : null;
+}
+
+/** Ejecuta una llamada a la API guardando su error para mostrarlo. Devuelve si salió bien. */
+export function useAction() {
+  const [error, setError] = useState<string | null>(null);
+  const run = async (fn: () => Promise<unknown>) => {
+    try {
+      await fn();
+      setError(null);
+      return true;
+    } catch (e) {
+      setError((e as Error).message);
+      return false;
+    }
+  };
+  return { error, run };
 }

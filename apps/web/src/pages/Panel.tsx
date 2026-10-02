@@ -1,18 +1,43 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../auth.tsx";
-import { buttonClass } from "../ui.tsx";
+
+const links = [
+  ["/panel", "Inicio"],
+  ["/panel/perfil", "Perfil"],
+  ["/panel/servicios", "Servicios"],
+  ["/panel/equipo", "Equipo"],
+  ["/panel/agenda", "Agenda"],
+] as const;
 
 export function Panel() {
   const { me, logout } = useAuth();
   if (me === undefined) return null;
   if (!me) return <Navigate to="/entrar" replace />;
   return (
-    <main className="mx-auto max-w-3xl p-6">
-      <h1 className="text-3xl font-bold">Hola, {me.name}</h1>
-      <p className="text-muted mt-2">Aquí irá el panel del negocio.</p>
-      <button onClick={logout} className={`${buttonClass} mt-6`}>
-        Salir
-      </button>
-    </main>
+    <div className="mx-auto max-w-4xl p-6">
+      <header className="bg-ink flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg px-5 py-3 text-white">
+        <strong className="text-gold mr-2 text-lg">AgendIA</strong>
+        <nav className="flex flex-wrap gap-4">
+          {links.map(([to, label]) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === "/panel"}
+              className={({ isActive }) =>
+                `hover:text-gold border-b-2 py-1 ${isActive ? "text-gold border-gold" : "border-transparent"}`
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+        <button onClick={logout} className="hover:text-gold ml-auto text-sm">
+          Salir ({me.name})
+        </button>
+      </header>
+      <main className="mt-6 space-y-6">
+        <Outlet />
+      </main>
+    </div>
   );
 }
