@@ -4,6 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { pgErrorCode } from "../errors.ts";
 import { newBookingCode } from "./booking-code.ts";
 import * as schema from "./schema.ts";
 import { prepareTestDatabase, truncateAll } from "./test-db.ts";
@@ -66,12 +67,6 @@ function booking(
   };
 }
 
-/** Código de error de Postgres (SQLSTATE) de un fallo de Drizzle/pg. */
-function pgCode(error: unknown): string | undefined {
-  const cause = (error as { cause?: { code?: string } }).cause;
-  return cause?.code ?? (error as { code?: string }).code;
-}
-
 describe("restricción de exclusión (sin solapamientos por profesional)", () => {
   it("de dos reservas concurrentes del mismo hueco, solo una entra (23P01)", async () => {
     const b = await createBusiness("fisio");
@@ -107,7 +102,7 @@ describe("restricción de exclusión (sin solapamientos por profesional)", () =>
     const rejected = results.filter((r) => r.status === "rejected");
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     expect(rejected).toHaveLength(1);
-    expect(pgCode(rejected[0]!.reason)).toBe("23P01");
+    expect(pgErrorCode(rejected[0]!.reason)).toBe("23P01");
   });
 
   it("permite reservas pegadas (el final de una es el inicio de otra)", async () => {
@@ -144,7 +139,7 @@ describe("claves foráneas compuestas (aislamiento entre negocios)", () => {
       .insert(schema.bookings)
       .values(mixed)
       .catch((e: unknown) => e);
-    expect(pgCode(error)).toBe("23503");
+    expect(pgErrorCode(error)).toBe("23503");
   });
 
   it("no se puede asignar a un profesional un servicio de otro negocio", async () => {
@@ -154,7 +149,7 @@ describe("claves foráneas compuestas (aislamiento entre negocios)", () => {
       .insert(schema.staffServices)
       .values({ businessId: a.business.id, staffId: a.staff.id, serviceId: b.service.id })
       .catch((e: unknown) => e);
-    expect(pgCode(error)).toBe("23503");
+    expect(pgErrorCode(error)).toBe("23503");
   });
 
   it("rechaza una reserva que termina antes de empezar", async () => {
@@ -163,7 +158,7 @@ describe("claves foráneas compuestas (aislamiento entre negocios)", () => {
       .insert(schema.bookings)
       .values(booking(b, "2026-11-02T10:00:00Z", "2026-11-02T09:00:00Z"))
       .catch((e: unknown) => e);
-    expect(pgCode(error)).toBe("23514");
+    expect(pgErrorCode(error)).toBe("23514");
   });
 });
 

@@ -106,7 +106,11 @@ export const businessMembers = pgTable(
       .references(() => businesses.id, { onDelete: "cascade" }),
     role: memberRole("role").notNull().default("owner"),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.businessId] })],
+  (t) => [
+    primaryKey({ columns: [t.userId, t.businessId] }),
+    // D6: un propietario, un negocio. Se quita si en el futuro hay varios negocios por usuario.
+    unique("business_members_user_unique").on(t.userId),
+  ],
 );
 
 // --- Tablas de negocio ---
@@ -315,4 +319,19 @@ export const idempotencyKeys = pgTable(
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.key] })],
+);
+
+// Sesiones de usuario (cookie HttpOnly). Solo se guarda el hash SHA-256 del token:
+// si se filtra la base de datos, los tokens no sirven para entrar.
+export const sessions = pgTable(
+  "sessions",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: instant("expires_at").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("sessions_user_idx").on(t.userId)],
 );

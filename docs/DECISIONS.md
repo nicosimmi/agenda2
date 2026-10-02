@@ -1,4 +1,4 @@
-# DECISIONS
+﻿# DECISIONS
 
 Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. Las decisiones por defecto D1–D16 están en `docs/SPEC.md` §19.
 
@@ -88,3 +88,50 @@ Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. L
 ## F1-7. Código de reserva
 
 - **Decisión:** 10 caracteres de un alfabeto sin caracteres ambiguos (sin 0/O ni 1/I/L), generados con `crypto.randomInt`, con unos 8·10¹⁴ valores posibles. La unicidad la garantiza la base de datos (`UNIQUE`).
+
+## F2-1. Sesiones propias en Postgres, no JWT
+
+- **Contexto:** la web y la API comparten dominio en local y en la demo; hace falta poder cerrar una sesión al momento.
+- **Decisión:** un token aleatorio de 32 bytes viaja en la cookie `sid` (HttpOnly, SameSite=Lax, `Secure` en producción) y en la tabla `sessions` se guarda solo su SHA-256. Caduca a los 7 días. Logout borra la fila.
+- **Alternativas:** JWT (no se puede revocar sin una lista negra, que acaba siendo una tabla igual); `@fastify/session` o `@fastify/secure-session` (una dependencia más para lo que ocupa unas 30 líneas).
+
+## F2-2. CSRF por comprobación de `Origin`
+
+- **Decisión:** en métodos que cambian datos, si llega `Origin` tiene que estar en `WEB_ORIGIN`, y si llega la cookie de sesión `Origin` es obligatorio. Se suma a SameSite=Lax y a un CORS restrictivo. Los clientes que no son navegador (curl, y el MCP en la Fase 5, que usará un token y no la cookie) no mandan `Origin` ni cookie, así que no les afecta.
+- **Alternativas:** token CSRF sincronizado (`@fastify/csrf-protection`): más piezas en la web y en la API para el mismo resultado en navegadores modernos.
+
+## F2-3. Zod a mano en cada handler
+
+- **Decisión:** `schema.parse(req.body)` dentro del handler, y el manejador de errores global convierte el `ZodError` en 400 `VALIDATION_ERROR`. Sin `fastify-type-provider-zod`.
+- **Alternativas:** el type provider (otra dependencia; tipa `req.body` automáticamente). Se reconsidera si las rutas crecen mucho en la Fase 3.
+
+## F2-4. Contexto de tenant con tipo marcado (brand)
+
+- **Decisión:** `TenantContext` lleva una marca de tipo que solo puede fabricar `tenantForOwner(db, userId)`, a partir del usuario de la sesión. Las funciones de `tenant.ts` lo exigen como parámetro, y el plugin `/business` lo carga en un `preHandler` común a todas sus rutas. Si alguien construye un contexto con un id de la URL, el compilador lo rechaza (salvo un `as` explícito, fácil de ver en una revisión).
+- **Excepción documentada:** `POST /admin/businesses/:id/suspend` recibe el id por parámetro porque el administrador no pertenece a ningún negocio. Solo lo puede llamar `platform_admin`.
+
+## F2-5. RLS de PostgreSQL: aplazado
+
+- **Contexto:** D4 la deja como refuerzo opcional. Con un pool de conexiones exige abrir una transacción por petición con `SET LOCAL app.business_id`.
+- **Decisión:** no se activa en el MVP. El aislamiento lo garantizan el contexto de tenant, las FK compuestas y la suite de aislamiento, que es obligatoria. Es el punto 4 del plan de recorte (WORKFLOW §10).
+- **Cómo se añadiría:** una política `USING (business_id = current_setting('app.business_id')::uuid)` por tabla de negocio y un rol de base de datos sin `BYPASSRLS` para la API.
+
+## F2-6. Rate limiting en memoria
+
+- **Decisión:** `@fastify/rate-limit` con el almacén en memoria. Login: 10 intentos cada 15 min por IP. Registro: 20 altas de cliente y 3 de negocio por IP y día (la clave incluye el rol, por eso el límite va en `preHandler`, con el cuerpo ya leído).
+- **Además:** el login tiene un segundo límite por cuenta (10 intentos por hora y email), para frenar la fuerza bruta repartida entre muchas IPs. A cambio, un atacante puede bloquear temporalmente el login de una cuenta concreta; se acepta en el MVP. Las IPv6 se agrupan por /64. Detrás de un proxy hay que poner su IP o CIDR en `TRUSTED_PROXIES` (Fastify desaconseja confiar por número de saltos, porque permite falsear `X-Forwarded-For`); si no, todas las peticiones tienen la IP del proxy y el límite pasa a ser global.
+- **Limitación:** con varias instancias de la API, cada una cuenta por separado. Si se despliega más de una, pasar a Redis (el plugin lo admite).
+
+## F2-7. Idempotencia con cerrojo de transacción
+
+- **Decisión:** `withIdempotency(db, userId, key, run)` abre una transacción, toma `pg_advisory_xact_lock` sobre `(usuario, clave)`, devuelve la respuesta guardada si existe y, si no, ejecuta `run` con la misma transacción y guarda la respuesta. Si `run` falla no se guarda nada y se puede reintentar. Se usará en `POST /me/bookings` (Fase 4).
+- **Limitación:** las claves no caducan; falta una limpieza periódica.
+
+## F2-8. El registro revela si un email ya existe
+
+- **Contexto:** el login responde igual (y en el mismo tiempo) exista o no el email, pero el registro devuelve 409 si el email está cogido. La revisión cruzada lo señaló.
+- **Decisión:** se acepta. Es lo habitual, el registro está limitado a 20 altas por IP y día, y la alternativa solo tiene sentido con verificación de email (Fase 8): responder siempre "te hemos enviado un correo".
+
+## F2-9. Un propietario, un negocio, impuesto por la base de datos
+
+- **Decisión:** `UNIQUE(user_id)` en `business_members` (D6). Sin ella, `tenantForOwner` podría elegir un negocio distinto entre peticiones si un usuario tuviera dos membresías. Si algún día se permite más de un negocio por usuario, se quita la restricción y el negocio activo pasa a guardarse en la sesión.

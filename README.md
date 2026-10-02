@@ -2,7 +2,7 @@
 
 Marketplace de reservas donde los negocios con citas (barberías, fisioterapia, pádel, estética…) se dan de alta y los clientes los buscan y reservan, bien con una interfaz clásica o con un **asistente de IA** que actúa mediante un **servidor MCP** propio. Proyecto de portfolio.
 
-> **Estado:** Fase 1 (datos y dominio). Consulta `docs/PROGRESS.md`.
+> **Estado:** Fase 2 (auth, roles y aislamiento). Consulta `docs/PROGRESS.md`.
 
 ## Documentación
 
@@ -61,6 +61,16 @@ El seed crea 8 negocios ficticios en Córdoba, Sevilla, Málaga, Madrid y Las Pa
 
 Para generar una migración nueva tras cambiar `schema.ts`: `pnpm --filter @agendia/api db:generate`.
 
+## API
+
+```powershell
+pnpm --filter @agendia/api dev   # http://127.0.0.1:3000 (se reinicia al guardar)
+```
+
+Rutas disponibles por ahora: `GET /health`, `POST /auth/register|login|logout`, `GET /auth/me`, `GET /me/bookings` (cliente), `GET /business/profile` y `GET /business/bookings?from=&to=` (propietario) y `POST /admin/businesses/:id/suspend` (administrador). Los errores siempre tienen la forma `{ "error": { "code", "message" } }`.
+
+La sesión va en una cookie `sid` HttpOnly. Las peticiones que cambian datos desde el navegador tienen que venir de un origen de `WEB_ORIGIN` (protección CSRF). Con `curl` no hace falta cabecera `Origin` mientras no se envíe la cookie.
+
 ## Calidad
 
 ```powershell
@@ -70,6 +80,8 @@ pnpm format:check   # Prettier
 pnpm test           # Vitest
 pnpm check          # todo lo anterior
 ```
+
+La suite de aislamiento (`apps/api/src/isolation.test.ts`) recorre una tabla con todas las rutas de la API: si se añade una ruta sin meterla en la tabla, o una ruta de cliente o de negocio sin su test de aislamiento, el CI falla.
 
 Los tests de integración usan Postgres real (la base `agendia_test`, que se crea sola), así que hace falta `docker compose up -d` antes de `pnpm test`.
 

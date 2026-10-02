@@ -15,6 +15,20 @@
       "when": 1790942280918,
       "tag": "0001_custom",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790950387033,
+      "tag": "0002_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790950938452,
+      "tag": "0003_business_members_one_per_user",
+      "breakpoints": true
     }
   ]
 }

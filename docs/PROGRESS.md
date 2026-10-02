@@ -1,42 +1,35 @@
 # PROGRESS
 
 **Última actualización:** 2026-10-02 · Claude Code (Opus 5.5)
-**Fase actual:** 1 — Datos multi-negocio y dominio **Estado:** terminada (merge a `main`, etiqueta `fase-1`, CI verde). Siguiente: Fase 2 con Opus 5.5. Revisión cruzada: subagente de Claude sin contexto (no hay Codex)
+**Fase actual:** 2 — Auth, roles y aislamiento **Estado:** terminada en la rama `fase-2/auth-aislamiento`, pendiente de confirmación para merge a `main` y etiqueta `fase-2`. Siguiente: Fase 3 (panel del negocio) con Sonnet 5.5.
 
 ## Hecho
 
-- Fase 0 cerrada: merge a `main`, etiqueta `fase-0` y push.
-- Rama `fase-1/datos-dominio`:
-  - `packages/core`: `computeAvailability`, una función pura con zonas horarias vía `Intl`. 19 tests, incluidos los de DST de Madrid y Canarias.
-  - `apps/api/src/db`: esquema Drizzle (14 tablas, FK compuestas), migraciones `0000_init` (generada) y `0001_custom` (a mano: exclusión, trigger de búsqueda, pg_trgm), `migrate.ts`, `newBookingCode`.
-  - Tests de integración contra Postgres (`agendia_test`): concurrencia (23P01), FK compuestas (23503), búsqueda. CI con servicio de Postgres.
-- Decisiones F1-1 a F1-7 en `docs/DECISIONS.md`.
+- Fases 0 y 1 cerradas (etiquetas `fase-0`, `fase-1`).
+- Fase 2, rama `fase-2/auth-aislamiento`:
+  - API Fastify (`apps/api/src/app.ts`, `server.ts`): errores uniformes, helmet, CORS, CSRF por `Origin`, rate limiting.
+  - Sesiones en la tabla `sessions` (hash SHA-256, cookie `sid`), rotación al hacer login, limpieza de caducadas.
+  - Auth: `POST /auth/register|login|logout`, `GET /auth/me`. El alta de negocio crea un negocio en `draft`.
+  - `TenantContext` con tipo marcado (`tenant.ts`); rutas `/business/profile`, `/business/bookings`, `/me/bookings`, `/admin/businesses/:id/suspend`.
+  - `withIdempotency` (aún sin ruta que la use; la usará `POST /me/bookings` en la Fase 4).
+  - Suite de aislamiento con tabla de rutas (`isolation.test.ts`). 69 tests en verde y CI verde.
+  - Revisión cruzada (subagente sin contexto) hecha: sin hallazgos graves; corregidos 7 de 9, decisiones F2-1 a F2-9.
+- RLS aplazada (F2-5).
 
-## En curso
+## Pendiente para fases posteriores
 
-- Seed hecho. Queda push, CI y checkpoint.
-- Modelo recomendado para el seed: Sonnet 5.5.
-
-## Pendiente de la fase
-
-- [ ] Seed y comprobar que carga limpio dos veces seguidas
-- [ ] README: migraciones, seed, tests de integración (necesitan Docker)
-- [ ] `pnpm check` + push + CI verde
-- [ ] CHECKPOINT, notas de entrevista y revisión cruzada con Codex (recomendada)
-
-## Revisión de la Fase 1 (Claude, en lugar de Codex)
-
-Sin hallazgos graves. Corregido: huecos duplicados si dos franjas de un profesional se solapan (test añadido). Pendiente para fases posteriores:
-
+- Fase 3 (baja): validar con Zod que `min_notice_min`, `max_horizon_days` y `cancel_limit_hours` no sean negativos y avisar si las franjas de un profesional se solapan.
+- Fase 3: cada ruta nueva del panel entra en la tabla `ROUTES` de `isolation.test.ts` con su test de aislamiento (el CI lo exige).
 - Fase 4 (media): una reserva `pending` caducada sigue bloqueando el hueco en la restricción de exclusión hasta que pase a `expired`. Al reservar, expirar las propuestas caducadas dentro de la misma transacción antes de insertar.
-- Fase 3/4 (baja): validar con Zod que `min_notice_min`, `max_horizon_days` y `cancel_limit_hours` no sean negativos, que el rango de fechas pedido a la disponibilidad sea corto, y avisar si las franjas de un profesional se solapan.
-- Fase 4 (baja): traducir `23P01` a un 409 claro.
+- Fase 4 (baja): traducir `23P01` a un 409 claro; validar que el rango de fechas de disponibilidad sea corto.
+- Fase 4 (baja): en `withIdempotency`, guardar un hash de método + ruta + cuerpo y responder 422 si la misma clave llega con otro cuerpo; validar la longitud de la cabecera `Idempotency-Key` (1–255).
+- Fase 4: aislamiento de búsqueda (negocios `draft`/`suspended` no aparecen ni admiten reservas).
 
 ## Comandos útiles
 
-- Levantar: `docker compose up -d` (tras `cp .env.example .env`)
+- Levantar: `docker compose up -d` (tras `cp .env.example .env`) · API: `pnpm --filter @agendia/api dev`
 - Migrar: `pnpm --filter @agendia/api db:migrate` · Generar migración: `pnpm --filter @agendia/api db:generate`
-- Todo: `pnpm check` (en PowerShell; los tests de integración necesitan Postgres levantado)
+- Todo: `pnpm check` (en PowerShell, con `%LOCALAPPDATA%\corepack-bin` en el PATH; los tests de integración necesitan Postgres levantado)
 
 ## Para quien continúe (Claude o Codex)
 
