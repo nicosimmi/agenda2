@@ -34,6 +34,9 @@ export async function getBusinessProfile(db: Db, t: TenantContext) {
       contactPhone: businesses.contactPhone,
       contactEmail: businesses.contactEmail,
       timezone: businesses.timezone,
+      minNoticeMin: businesses.minNoticeMin,
+      maxHorizonDays: businesses.maxHorizonDays,
+      cancelLimitHours: businesses.cancelLimitHours,
     })
     .from(businesses)
     .where(eq(businesses.id, t.businessId));
@@ -41,7 +44,13 @@ export async function getBusinessProfile(db: Db, t: TenantContext) {
 }
 
 /** Reservas del negocio en [from, to). Solo expone datos de clientes que han reservado aquí. */
-export async function listBusinessBookings(db: Db, t: TenantContext, from: Date, to: Date) {
+export async function listBusinessBookings(
+  db: Db,
+  t: TenantContext,
+  from: Date,
+  to: Date,
+  staffId?: string,
+) {
   return db
     .select({
       id: bookings.id,
@@ -50,6 +59,7 @@ export async function listBusinessBookings(db: Db, t: TenantContext, from: Date,
       endsAt: bookings.endsAt,
       status: bookings.status,
       source: bookings.source,
+      staffId: bookings.staffId,
       serviceName: services.name,
       staffName: staff.name,
       customerName: sql<string | null>`coalesce(${users.name}, ${bookings.guestName})`,
@@ -63,6 +73,7 @@ export async function listBusinessBookings(db: Db, t: TenantContext, from: Date,
         eq(bookings.businessId, t.businessId),
         gte(bookings.startsAt, from),
         lt(bookings.startsAt, to),
+        staffId ? eq(bookings.staffId, staffId) : undefined,
       ),
     )
     .orderBy(asc(bookings.startsAt));
