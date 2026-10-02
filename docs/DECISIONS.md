@@ -1,4 +1,4 @@
-# DECISIONS
+﻿# DECISIONS
 
 Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. Las decisiones por defecto D1–D16 están en `docs/SPEC.md` §19.
 
@@ -119,9 +119,19 @@ Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. L
 ## F2-6. Rate limiting en memoria
 
 - **Decisión:** `@fastify/rate-limit` con el almacén en memoria. Login: 10 intentos cada 15 min por IP. Registro: 20 altas de cliente y 3 de negocio por IP y día (la clave incluye el rol, por eso el límite va en `preHandler`, con el cuerpo ya leído).
+- **Además:** el login tiene un segundo límite por cuenta (10 intentos por hora y email), para frenar la fuerza bruta repartida entre muchas IPs. A cambio, un atacante puede bloquear temporalmente el login de una cuenta concreta; se acepta en el MVP. Las IPv6 se agrupan por /64. Detrás de un proxy hay que poner su IP o CIDR en `TRUSTED_PROXIES` (Fastify desaconseja confiar por número de saltos, porque permite falsear `X-Forwarded-For`); si no, todas las peticiones tienen la IP del proxy y el límite pasa a ser global.
 - **Limitación:** con varias instancias de la API, cada una cuenta por separado. Si se despliega más de una, pasar a Redis (el plugin lo admite).
 
 ## F2-7. Idempotencia con cerrojo de transacción
 
 - **Decisión:** `withIdempotency(db, userId, key, run)` abre una transacción, toma `pg_advisory_xact_lock` sobre `(usuario, clave)`, devuelve la respuesta guardada si existe y, si no, ejecuta `run` con la misma transacción y guarda la respuesta. Si `run` falla no se guarda nada y se puede reintentar. Se usará en `POST /me/bookings` (Fase 4).
 - **Limitación:** las claves no caducan; falta una limpieza periódica.
+
+## F2-8. El registro revela si un email ya existe
+
+- **Contexto:** el login responde igual (y en el mismo tiempo) exista o no el email, pero el registro devuelve 409 si el email está cogido. La revisión cruzada lo señaló.
+- **Decisión:** se acepta. Es lo habitual, el registro está limitado a 20 altas por IP y día, y la alternativa solo tiene sentido con verificación de email (Fase 8): responder siempre "te hemos enviado un correo".
+
+## F2-9. Un propietario, un negocio, impuesto por la base de datos
+
+- **Decisión:** `UNIQUE(user_id)` en `business_members` (D6). Sin ella, `tenantForOwner` podría elegir un negocio distinto entre peticiones si un usuario tuviera dos membresías. Si algún día se permite más de un negocio por usuario, se quita la restricción y el negocio activo pasa a guardarse en la sesión.
