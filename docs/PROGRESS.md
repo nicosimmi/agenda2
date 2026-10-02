@@ -1,34 +1,42 @@
 # PROGRESS
 
-**Última actualización:** 2026-10-01 · Claude Code (Opus 5.5 → Sonnet 5.5)
-**Fase actual:** 0 — Base **Estado:** terminada en local; pendiente de CI en GitHub y de la confirmación del desarrollador
+**Última actualización:** 2026-10-02 · Claude Code (Opus 5.5)
+**Fase actual:** 1 — Datos multi-negocio y dominio **Estado:** terminada en local; pendiente de push, CI y confirmación
 
 ## Hecho
 
-- Proyecto movido a `C:\dev\agenda2`; docs en `docs/`.
-- Monorepo pnpm, TS estricto, ESLint, Prettier, Vitest (1 test de humo), CI, `docker-compose.yml`, `.env.example`.
-- `AGENTS.md` y `CLAUDE.md`.
-- typecheck, lint, format, tests y build con código de salida 0 en local.
-- `docker compose up -d`: Postgres 17 (healthy), Mailpit (healthy) y n8n (`/healthz` ok) en marcha. `btree_gist`, `unaccent` y `pg_trgm` se crean bien.
+- Fase 0 cerrada: merge a `main`, etiqueta `fase-0` y push.
+- Rama `fase-1/datos-dominio`:
+  - `packages/core`: `computeAvailability`, una función pura con zonas horarias vía `Intl`. 19 tests, incluidos los de DST de Madrid y Canarias.
+  - `apps/api/src/db`: esquema Drizzle (14 tablas, FK compuestas), migraciones `0000_init` (generada) y `0001_custom` (a mano: exclusión, trigger de búsqueda, pg_trgm), `migrate.ts`, `newBookingCode`.
+  - Tests de integración contra Postgres (`agendia_test`): concurrencia (23P01), FK compuestas (23503), búsqueda. CI con servicio de Postgres.
+- Decisiones F1-1 a F1-7 en `docs/DECISIONS.md`.
 
 ## En curso
 
-- Nada. Esperando "siguiente fase".
+- Seed hecho. Queda push, CI y checkpoint.
+- Modelo recomendado para el seed: Sonnet 5.5.
 
 ## Pendiente de la fase
 
-- [ ] Subir la rama `fase-0/base` y comprobar CI verde en GitHub (hace falta `git push`)
-- [ ] Merge `--no-ff` a `main` y etiqueta `fase-0`
-- [ ] El desarrollador borra la copia antigua en OneDrive cuando lo confirme
+- [ ] Seed y comprobar que carga limpio dos veces seguidas
+- [ ] README: migraciones, seed, tests de integración (necesitan Docker)
+- [ ] `pnpm check` + push + CI verde
+- [ ] CHECKPOINT, notas de entrevista y revisión cruzada con Codex (recomendada)
 
-## Decisiones recientes
+## Revisión de la Fase 1 (Claude, en lugar de Codex)
 
-F0-1 a F0-9 en `docs/DECISIONS.md`.
+Sin hallazgos graves. Corregido: huecos duplicados si dos franjas de un profesional se solapan (test añadido). Pendiente para fases posteriores:
+
+- Fase 4 (media): una reserva `pending` caducada sigue bloqueando el hueco en la restricción de exclusión hasta que pase a `expired`. Al reservar, expirar las propuestas caducadas dentro de la misma transacción antes de insertar.
+- Fase 3/4 (baja): validar con Zod que `min_notice_min`, `max_horizon_days` y `cancel_limit_hours` no sean negativos, que el rango de fechas pedido a la disponibilidad sea corto, y avisar si las franjas de un profesional se solapan.
+- Fase 4 (baja): traducir `23P01` a un 409 claro.
 
 ## Comandos útiles
 
 - Levantar: `docker compose up -d` (tras `cp .env.example .env`)
-- Todo: `pnpm check` (en PowerShell)
+- Migrar: `pnpm --filter @agendia/api db:migrate` · Generar migración: `pnpm --filter @agendia/api db:generate`
+- Todo: `pnpm check` (en PowerShell; los tests de integración necesitan Postgres levantado)
 
 ## Para quien continúe (Claude o Codex)
 

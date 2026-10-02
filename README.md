@@ -2,7 +2,7 @@
 
 Marketplace de reservas donde los negocios con citas (barberías, fisioterapia, pádel, estética…) se dan de alta y los clientes los buscan y reservan, bien con una interfaz clásica o con un **asistente de IA** que actúa mediante un **servidor MCP** propio. Proyecto de portfolio.
 
-> **Estado:** Fase 0 (base del monorepo). Consulta `docs/PROGRESS.md`.
+> **Estado:** Fase 1 (datos y dominio). Consulta `docs/PROGRESS.md`.
 
 ## Documentación
 
@@ -44,6 +44,23 @@ docker compose up -d
 | Mailpit    | http://localhost:8025 |
 | n8n        | http://localhost:5678 |
 
+## Base de datos
+
+```powershell
+pnpm --filter @agendia/api db:migrate   # aplica las migraciones a la base de .env
+pnpm --filter @agendia/api db:seed      # carga los datos de demostración (borra los datos existentes)
+```
+
+El seed crea 8 negocios ficticios en Córdoba, Sevilla, Málaga, Madrid y Las Palmas, más un negocio en borrador con textos manipuladores para las evaluaciones del agente (Fase 8). Cuentas de demostración, todas con la contraseña `demo-1234` (solo para desarrollo y demo):
+
+| Cuenta                                 | Rol                                                              |
+| -------------------------------------- | ---------------------------------------------------------------- |
+| `cliente@demo.agendia.test`            | cliente                                                          |
+| `admin@demo.agendia.test`              | administrador de plataforma                                      |
+| `<slug-del-negocio>@demo.agendia.test` | propietario (por ejemplo `barberia-el-califa@demo.agendia.test`) |
+
+Para generar una migración nueva tras cambiar `schema.ts`: `pnpm --filter @agendia/api db:generate`.
+
 ## Calidad
 
 ```powershell
@@ -53,6 +70,8 @@ pnpm format:check   # Prettier
 pnpm test           # Vitest
 pnpm check          # todo lo anterior
 ```
+
+Los tests de integración usan Postgres real (la base `agendia_test`, que se crea sola), así que hace falta `docker compose up -d` antes de `pnpm test`.
 
 Ningún test automático llama a un LLM real.
 
