@@ -69,6 +69,7 @@ export function computeAvailability(input: AvailabilityInput): Slot[] {
       ...input.existingBookings.filter((booking) => booking.staffId === staffId),
     ].map((item) => ({ start: item.startsAt.getTime(), end: item.endsAt.getTime() }));
 
+    const seen = new Set<number>(); // franjas solapadas no deben duplicar huecos
     for (const date of datesBetween(input.range.from, input.range.to)) {
       const weekday = isoWeekday(date);
       const shifts = input.workingHours.filter(
@@ -78,9 +79,10 @@ export function computeAvailability(input: AvailabilityInput): Slot[] {
         const shiftStart = localToUtc(date, shift.startTime, settings.timezone).getTime();
         const shiftEnd = localToUtc(date, shift.endTime, settings.timezone).getTime();
         for (let start = shiftStart; start + blockMs <= shiftEnd; start += stepMs) {
-          if (start < earliest || start > latest) continue;
+          if (start < earliest || start > latest || seen.has(start)) continue;
           const block = { start, end: start + blockMs };
           if (busy.some((interval) => overlaps(block, interval))) continue;
+          seen.add(start);
           slots.push({ staffId, startsAt: new Date(block.start), endsAt: new Date(block.end) });
         }
       }

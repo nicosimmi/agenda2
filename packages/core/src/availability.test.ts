@@ -169,6 +169,19 @@ describe("computeAvailability", () => {
     expect(slots.map((s) => s.staffId)).toEqual([ANA, LUIS]);
   });
 
+  it("no duplica huecos si dos franjas del mismo profesional se solapan", () => {
+    const result = starts(
+      input({
+        workingHours: [
+          { staffId: ANA, weekday: 1, startTime: "10:00", endTime: "11:00" },
+          { staffId: ANA, weekday: 1, startTime: "10:30", endTime: "12:00" },
+        ],
+      }),
+    );
+    expect(result).toHaveLength(7);
+    expect(new Set(result).size).toBe(result.length);
+  });
+
   it("no lanza con un servicio que nadie hace (sin candidatos)", () => {
     expect(computeAvailability(input({ staffCandidates: [] }))).toEqual([]);
   });
