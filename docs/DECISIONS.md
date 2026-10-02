@@ -135,3 +135,27 @@ Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. L
 ## F2-9. Un propietario, un negocio, impuesto por la base de datos
 
 - **Decisión:** `UNIQUE(user_id)` en `business_members` (D6). Sin ella, `tenantForOwner` podría elegir un negocio distinto entre peticiones si un usuario tuviera dos membresías. Si algún día se permite más de un negocio por usuario, se quita la restricción y el negocio activo pasa a guardarse en la sesión.
+
+## F3-1. Servicios de un profesional dentro del propio profesional
+
+- **Decisión:** `serviceIds` viaja en el cuerpo de `POST /business/staff` y `PATCH /business/staff/:id` y se reemplaza entero en una transacción. No hay ruta aparte `PUT /staff/:id/services`. Antes de guardar se comprueba que todos los servicios sean del negocio (400 si no); las claves foráneas compuestas serían la segunda defensa.
+- **Alternativa:** ruta propia por recurso; más rutas y más entradas en la tabla de aislamiento para el mismo efecto.
+
+## F3-2. La reserva manual ignora horario y preaviso
+
+- **Contexto:** el propietario apunta citas por teléfono o de paso, a veces fuera del horario publicado.
+- **Decisión:** `POST /business/bookings` solo exige servicio y profesional activos que se correspondan, y que no se solape con otra reserva activa (la restricción de exclusión devuelve 409 «Ese hueco ya está ocupado»). No consulta horario, ausencias, preaviso ni horizonte. Antes de insertar pasa a `expired` las propuestas caducadas de ese profesional.
+- **Alternativa:** revalidar con `computeAvailability`, como hará la reserva del cliente en la Fase 4. Se descarta aquí porque impediría el caso de uso.
+
+## F3-3. Borrar archiva si hay historial
+
+- **Decisión:** `DELETE` de un servicio o profesional con reservas lo desactiva (`active = false`) y responde `{ archived: true }`; sin reservas lo borra (horarios y asignaciones en cascada). Las reservas tienen clave foránea a ambos y no se pueden dejar huérfanas.
+
+## F3-4. Esquemas de actualización sin valores por defecto
+
+- **Contexto:** en Zod 4, `.partial()` sobre un campo con `default` aplica el valor por defecto cuando falta, así que un `PATCH` reiniciaba `active` o `description`.
+- **Decisión:** en `packages/shared` los esquemas de actualización parten de los campos sin `default`. Un test (`panel.test.ts`) lo fija.
+
+## F3-5. Recortes de alcance de la Fase 3
+
+- **Decisión:** el CRUD de FAQ (SPEC §8) y mover una reserva quedan para cuando los use alguien: la FAQ, el agente (Fase 6); mover, el flujo del cliente (Fase 4). Cancelar y marcar `completed`/`no_show` sí están. El registro del agente también espera a la Fase 6.

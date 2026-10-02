@@ -1,7 +1,7 @@
 # PROGRESS
 
-**Última actualización:** 2026-10-02 · Claude Code (Opus 5.5)
-**Fase actual:** 2 — Auth, roles y aislamiento **Estado:** terminada (merge a `main`, etiqueta `fase-2`, CI verde). Siguiente: Fase 3 (panel del negocio) con Sonnet 5.5.
+**Última actualización:** 2026-10-02 · Claude Code (Sonnet 5.5)
+**Fase actual:** 3 — Panel del negocio (rama `fase-3/panel-negocio`) **Estado:** en curso. Tanda 1 (API) terminada; falta la tanda 2 (interfaz en `apps/web`, que está vacío).
 
 ## Hecho
 
@@ -16,12 +16,15 @@
   - Revisión cruzada (subagente sin contexto) hecha: sin hallazgos graves; corregidos 7 de 9, decisiones F2-1 a F2-9.
 - RLS aplazada (F2-5).
 
+## En curso (Fase 3)
+
+- Tanda 1 hecha: perfil (`PATCH`), servicios, profesionales (con `serviceIds`), horarios semanales (con avisos de solape), ausencias, lista de comprobación, publicar/despublicar, agenda con filtro por profesional, reserva manual y cambio de estado. Código en `apps/api/src/panel.ts` y `routes/business.ts`; esquemas en `packages/shared`. 160 tests en verde (`pnpm check`). Decisiones F3-1 a F3-5.
+- Tanda 2, siguiente paso: montar Vite + React + TS + Tailwind en `apps/web` (proxy a la API), añadir `react-router-dom` (aprobado), alta por pasos, pantallas del panel y un E2E de Playwright (alta → publicar → ver agenda). Después: README, INTERVIEW_NOTES, CHECKPOINT y merge.
+
 ## Pendiente para fases posteriores
 
-- Fase 3 (baja): validar con Zod que `min_notice_min`, `max_horizon_days` y `cancel_limit_hours` no sean negativos y avisar si las franjas de un profesional se solapan.
-- Fase 3: cada ruta nueva del panel entra en la tabla `ROUTES` de `isolation.test.ts` con su test de aislamiento (el CI lo exige).
 - Fase 4 (media): una reserva `pending` caducada sigue bloqueando el hueco en la restricción de exclusión hasta que pase a `expired`. Al reservar, expirar las propuestas caducadas dentro de la misma transacción antes de insertar.
-- Fase 4 (baja): traducir `23P01` a un 409 claro; validar que el rango de fechas de disponibilidad sea corto.
+- Fase 4 (baja): validar que el rango de fechas de disponibilidad sea corto. (El 409 por `23P01` y la expiración de propuestas caducadas ya están en la reserva manual, `panel.ts`; reutilizarlos en `POST /me/bookings`.)
 - Fase 4 (baja): en `withIdempotency`, guardar un hash de método + ruta + cuerpo y responder 422 si la misma clave llega con otro cuerpo; validar la longitud de la cabecera `Idempotency-Key` (1–255).
 - Fase 4: aislamiento de búsqueda (negocios `draft`/`suspended` no aparecen ni admiten reservas).
 
