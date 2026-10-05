@@ -19,9 +19,18 @@
   src: url("/fonts/kulim-park-700.woff2") format("woff2");
 }
 
+/* El ¿ y el ¡ de Kulim Park salen deformados (un gancho con el punto desalineado): esos dos signos se
+   toman de una fuente del sistema y el resto del texto sigue en Kulim Park. */
+@font-face {
+  font-family: "Signos";
+  font-weight: 400;
+  src: local("Arial"), local("Helvetica"), local("Liberation Sans"), local("Segoe UI");
+  unicode-range: U+00A1, U+00BF;
+}
+
 /* Tokens de la dirección visual (DECISIONS F3-6). Un solo sitio para la paleta. */
 @theme {
-  --font-sans: "Kulim Park", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Signos", "Kulim Park", ui-sans-serif, system-ui, sans-serif;
   --color-cream: #faf7f0;
   --color-card: #ffffff;
   --color-ink: #1c1917;

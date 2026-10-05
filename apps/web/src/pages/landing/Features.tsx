@@ -6,32 +6,65 @@ import {
   IconShieldLock,
 } from "@tabler/icons-react";
 import { motion } from "motion/react";
+import { useEffect, useState } from "react";
 import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 
 const box = "bg-cream border-ink/5 flex size-full min-h-24 rounded-lg border p-3";
 
+const SLOTS = [
+  ["09:00", false],
+  ["09:30", true],
+  ["10:00", false],
+  ["10:30", false],
+  ["11:00", true],
+  ["11:30", false],
+  ["12:00", false],
+  ["12:30", true],
+] as const;
+const FREE = SLOTS.flatMap(([, busy], i) => (busy ? [] : [i]));
+
+/** Un día de la agenda: los huecos ocupados salen tachados y la selección salta entre los libres. */
 function Slots() {
-  const slots = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30"];
+  const [pick, setPick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setPick((p) => (p + 1) % FREE.length), 1800);
+    return () => clearInterval(t);
+  }, []);
+  const selected = FREE[pick] ?? 0;
   return (
-    <div className={`${box} flex-wrap content-start gap-2`}>
-      {slots.map((s, i) => (
-        <motion.span
-          key={s}
-          initial={{ opacity: 0, scale: 0.8 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: i * 0.08 }}
-          className={`rounded-md px-3 py-1 text-sm font-semibold ${
-            i === 2
-              ? "bg-gold text-ink"
-              : i === 1 || i === 4
-                ? "text-muted line-through"
-                : "bg-white"
-          }`}
-        >
-          {s}
-        </motion.span>
-      ))}
+    <div className={`${box} flex-col justify-between gap-3`}>
+      <div className="flex items-center justify-between text-sm">
+        <strong>Viernes · Corte (30 min)</strong>
+        <span className="text-muted">{FREE.length} huecos libres</span>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {SLOTS.map(([time, busy], i) => (
+          <div
+            key={time}
+            className={`relative rounded-md py-1.5 text-center text-sm font-semibold ${
+              busy ? "text-muted bg-transparent line-through" : "bg-white"
+            }`}
+          >
+            {i === selected && (
+              <motion.span
+                layoutId="slot-pick"
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                className="bg-gold absolute inset-0 rounded-md"
+              />
+            )}
+            <span className="relative">{time}</span>
+          </div>
+        ))}
+      </div>
+      <motion.div
+        key={selected}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-ink flex items-center justify-between rounded-md px-3 py-2 text-sm text-white"
+      >
+        <span>Reservar {SLOTS[selected]?.[0]}</span>
+        <span className="text-gold font-bold">Confirmar →</span>
+      </motion.div>
     </div>
   );
 }

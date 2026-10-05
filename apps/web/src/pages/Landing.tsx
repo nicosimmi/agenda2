@@ -5,7 +5,6 @@ import { HoverBorderGradient } from "@/components/ui/hover-border-gradient";
 import { InfiniteMovingCards } from "@/components/ui/infinite-moving-cards";
 import { LampContainer } from "@/components/ui/lamp";
 import { LayoutTextFlip } from "@/components/ui/layout-text-flip";
-import { MagneticButton } from "@/components/ui/magnetic-button";
 import { ContainerScroll } from "@/components/ui/container-scroll-animation";
 import { BackgroundBeams } from "@/components/ui/background-beams";
 import { StickyBanner } from "@/components/ui/sticky-banner";
@@ -143,14 +142,12 @@ export function Landing() {
                   Crear mi negocio
                 </HoverBorderGradient>
               </Link>
-              <MagneticButton strength={0.5} maxDistance={40}>
-                <Link
-                  to="/entrar"
-                  className="border-ink/20 hover:border-ink inline-block rounded-md border px-6 py-3 font-bold transition-colors"
-                >
-                  Ya tengo cuenta
-                </Link>
-              </MagneticButton>
+              <Link
+                to="/entrar"
+                className="border-ink/20 hover:border-ink inline-block rounded-md border px-6 py-3 font-bold transition-colors"
+              >
+                Ya tengo cuenta
+              </Link>
             </motion.div>
           </div>
           <AgendaMock />
@@ -215,14 +212,14 @@ export function Landing() {
         <GlobeSection />
       </div>
 
-      <LampContainer className="min-h-[26rem] bg-ink">
+      <LampContainer className="min-h-[34rem] bg-ink">
         <motion.div
           initial={{ opacity: 0.5, y: 80 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.8, ease: "easeInOut" }}
           className="text-center"
         >
-          <h2 className="bg-gradient-to-br from-stone-100 to-stone-400 bg-clip-text text-4xl font-bold text-transparent md:text-6xl">
+          <h2 className="bg-gradient-to-br from-stone-100 to-stone-400 bg-clip-text pb-4 text-4xl leading-tight font-bold text-transparent md:text-6xl">
             ¿Listo para abrir tu agenda?
           </h2>
           <Link
