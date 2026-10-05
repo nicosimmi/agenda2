@@ -1,294 +1,245 @@
-import { motion, useScroll, useSpring, useTransform } from "motion/react";
-import { useRef } from "react";
+import { motion } from "motion/react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { HoverBorderGradient } from "@/components/ui/hover-border-gradient";
+import { InfiniteMovingCards } from "@/components/ui/infinite-moving-cards";
+import { LampContainer } from "@/components/ui/lamp";
+import { LayoutTextFlip } from "@/components/ui/layout-text-flip";
+import { MagneticButton } from "@/components/ui/magnetic-button";
+import { ContainerScroll } from "@/components/ui/container-scroll-animation";
+import { BackgroundBeams } from "@/components/ui/background-beams";
+import { StickyBanner } from "@/components/ui/sticky-banner";
+import { TextHoverEffect } from "@/components/ui/text-hover-effect";
+import { TracingBeam } from "@/components/ui/tracing-beam";
+import {
+  MobileNav,
+  MobileNavHeader,
+  MobileNavMenu,
+  MobileNavToggle,
+  NavBody,
+  Navbar,
+  NavItems,
+} from "@/components/ui/resizable-navbar";
 import { Reveal } from "../motion.tsx";
+import { AgendaMock } from "./landing/AgendaMock.tsx";
+import { Features } from "./landing/Features.tsx";
+import { GlobeSection } from "./landing/GlobeSection.tsx";
 
-const CATEGORIES = ["Barbería", "Peluquería", "Fisioterapia", "Pádel", "Estética", "Veterinaria"];
-
-const FEATURES = [
-  {
-    title: "Reserva sin llamadas",
-    text: "El cliente elige servicio, profesional y hueco. Los huecos ocupados no aparecen, así que no hay solapes.",
-    icon: "M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z",
-  },
-  {
-    title: "Un asistente que propone",
-    text: "Escribes lo que necesitas y el asistente busca huecos y te los propone. La reserva solo se confirma cuando pulsas el botón.",
-    icon: "M8 10h8M8 14h5m-9 6 3-3h11a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v15Z",
-  },
-  {
-    title: "Tu negocio, tus datos",
-    text: "Cada negocio ve solo lo suyo. Servicios, equipo, horarios y ausencias se gestionan desde un único panel.",
-    icon: "M12 3 4 6v5c0 5 3.4 8.4 8 10 4.6-1.6 8-5 8-10V6l-8-3Z",
-  },
+const NAV = [
+  { name: "Funciones", link: "#funciones" },
+  { name: "Cómo empezar", link: "#como-empezar" },
+  { name: "Negocios", link: "#negocios" },
 ];
 
+const CATEGORIES = [
+  ["Barbería", "Corte, barba y arreglo, cada uno con su duración y su precio."],
+  ["Peluquería", "Varios profesionales, cada uno con su horario y sus servicios."],
+  ["Fisioterapia", "Sesiones de 45 o 60 minutos con pausa entre pacientes."],
+  ["Pádel", "Pistas y clases con huecos fijos que se llenan solos."],
+  ["Estética", "Tratamientos largos, con descansos entre uno y otro."],
+  ["Veterinaria", "Consultas y vacunas con la agenda del equipo a la vista."],
+].map(([name, quote]) => ({ name: name!, quote: quote!, title: "Para negocios como el tuyo" }));
+
 const STEPS = [
-  ["Date de alta", "Crea tu cuenta y tu negocio en dos pasos."],
-  ["Configura el equipo", "Añade servicios, profesionales y horarios semanales."],
+  ["Date de alta", "Crea tu cuenta y tu negocio en dos pasos. No hace falta tarjeta."],
+  ["Configura tu equipo", "Añade tus servicios, tus profesionales y sus horarios semanales."],
   ["Publica", "Cuando la lista de comprobación está completa, apareces para tus clientes."],
 ];
 
-export function Landing() {
-  const { scrollYProgress } = useScroll();
-  const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 24 });
-  const hero = useRef<HTMLElement>(null);
-  const { scrollYProgress: heroProgress } = useScroll({
-    target: hero,
-    offset: ["start start", "end start"],
-  });
-  const blobY = useTransform(heroProgress, [0, 1], [0, 160]);
-  const cardY = useTransform(heroProgress, [0, 1], [0, -60]);
-  const fade = useTransform(heroProgress, [0, 0.9], [1, 0]);
+function Logo({ className = "" }: { className?: string }) {
+  return (
+    <Link to="/" className={`text-xl font-bold ${className}`}>
+      Agend<span className="text-gold-dark">IA</span>
+    </Link>
+  );
+}
 
+function TopNav() {
+  const [open, setOpen] = useState(false);
+  const cta = "rounded-full bg-ink px-4 py-2 text-sm font-bold text-white";
+  return (
+    <Navbar className="top-3">
+      <NavBody>
+        <Logo />
+        <NavItems items={NAV} />
+        <div className="relative z-20 flex items-center gap-4 text-sm font-bold">
+          <Link to="/entrar" className="hover:text-gold-dark transition-colors">
+            Entrar
+          </Link>
+          <Link to="/alta" className={`${cta} hover:bg-gold hover:text-ink transition-colors`}>
+            Alta de negocio
+          </Link>
+        </div>
+      </NavBody>
+      <MobileNav>
+        <MobileNavHeader>
+          <Logo />
+          <MobileNavToggle isOpen={open} onClick={() => setOpen(!open)} />
+        </MobileNavHeader>
+        <MobileNavMenu isOpen={open} onClose={() => setOpen(false)}>
+          {NAV.map((n) => (
+            <a key={n.link} href={n.link} onClick={() => setOpen(false)} className="font-semibold">
+              {n.name}
+            </a>
+          ))}
+          <Link to="/entrar" className="font-semibold">
+            Entrar
+          </Link>
+          <Link to="/alta" className={cta}>
+            Alta de negocio
+          </Link>
+        </MobileNavMenu>
+      </MobileNav>
+    </Navbar>
+  );
+}
+
+export function Landing() {
   return (
     <div className="overflow-x-clip">
-      <motion.div
-        style={{ scaleX: progress }}
-        className="bg-gold fixed inset-x-0 top-0 z-50 h-1 origin-left"
-      />
+      <StickyBanner className="bg-ink" hideOnScroll>
+        <p className="text-sm text-white">
+          <span className="text-gold font-bold">Versión de demostración.</span> Proyecto de
+          portfolio en desarrollo.
+        </p>
+      </StickyBanner>
+      <TopNav />
 
-      <header className="border-ink/5 bg-cream/80 sticky top-0 z-40 border-b backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-          <strong className="text-xl">
-            Agend<span className="text-gold-dark">IA</span>
-          </strong>
-          <nav className="flex items-center gap-5 text-sm font-semibold">
-            <Link to="/entrar" className="hover:text-gold-dark transition-colors">
-              Entrar
-            </Link>
-            <Link
-              to="/alta"
-              className="bg-ink hover:bg-gold hover:text-ink rounded-md px-4 py-2 text-white transition-colors"
+      <section className="relative">
+        <BackgroundBeams className="opacity-60" />
+        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-6 pt-16 pb-24 md:grid-cols-2 md:pt-24">
+          <div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-start gap-3"
             >
-              Alta de negocio
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      <section ref={hero} className="relative">
-        <motion.div
-          style={{ y: blobY }}
-          aria-hidden
-          className="bg-gold/25 pointer-events-none absolute -top-24 -right-24 h-96 w-96 rounded-full blur-3xl"
-        />
-        <motion.div
-          style={{ y: blobY }}
-          aria-hidden
-          className="bg-gold-dark/15 pointer-events-none absolute top-60 -left-24 h-80 w-80 rounded-full blur-3xl"
-        />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-6 py-20 md:grid-cols-2 md:py-28">
-          <motion.div style={{ opacity: fade }}>
+              <LayoutTextFlip
+                text="Reservas para"
+                words={["barberías", "clínicas", "peluquerías", "pistas de pádel"]}
+              />
+            </motion.div>
             <motion.p
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-gold-dark mb-4 text-sm font-bold tracking-widest uppercase"
-            >
-              Reservas para negocios locales
-            </motion.p>
-            <motion.h1
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.7 }}
-              className="text-5xl leading-tight font-bold md:text-6xl"
-            >
-              Tu agenda llena, <span className="text-gold-dark">sin atender el teléfono.</span>
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25, duration: 0.7 }}
+              transition={{ delay: 0.2 }}
               className="text-muted mt-6 max-w-md text-lg"
             >
-              Servicios, equipo y horarios en un panel. Tus clientes reservan solos o con ayuda de
-              un asistente.
+              Servicios, equipo y horarios en un solo panel. Tus clientes reservan solos o con ayuda
+              de un asistente, y tu agenda no se solapa.
             </motion.p>
             <motion.div
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.7 }}
-              className="mt-8 flex flex-wrap gap-4"
+              transition={{ delay: 0.35 }}
+              className="mt-8 flex flex-wrap items-center gap-4"
             >
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }}>
-                <Link
-                  to="/alta"
-                  className="bg-gold text-ink hover:bg-gold-dark inline-block rounded-md px-6 py-3 font-bold shadow-lg shadow-amber-900/10 transition-colors"
+              <Link to="/alta">
+                <HoverBorderGradient
+                  as="span"
+                  containerClassName="rounded-md"
+                  className="bg-ink hover:bg-ink/90 rounded-md px-6 py-3 font-bold text-white"
                 >
                   Crear mi negocio
-                </Link>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }}>
+                </HoverBorderGradient>
+              </Link>
+              <MagneticButton strength={0.5} maxDistance={40}>
                 <Link
                   to="/entrar"
                   className="border-ink/20 hover:border-ink inline-block rounded-md border px-6 py-3 font-bold transition-colors"
                 >
                   Ya tengo cuenta
                 </Link>
-              </motion.div>
+              </MagneticButton>
             </motion.div>
-          </motion.div>
-
-          <motion.div style={{ y: cardY }} className="relative">
-            <AgendaMock />
-          </motion.div>
+          </div>
+          <AgendaMock />
         </div>
       </section>
 
-      <div className="border-ink/10 bg-ink overflow-hidden border-y py-4 text-white" aria-hidden>
-        <motion.div
-          animate={{ x: ["0%", "-50%"] }}
-          transition={{ duration: 24, ease: "linear", repeat: Infinity }}
-          className="flex w-max gap-12 text-lg font-semibold whitespace-nowrap"
-        >
-          {[...CATEGORIES, ...CATEGORIES, ...CATEGORIES, ...CATEGORIES].map((c, i) => (
-            <span key={i} className="flex items-center gap-12">
-              {c} <span className="text-gold">✦</span>
-            </span>
-          ))}
-        </motion.div>
+      <div className="bg-ink border-y border-white/10 py-6" aria-label="Tipos de negocio">
+        <InfiniteMovingCards items={CATEGORIES} speed="slow" className="mx-auto max-w-none" />
       </div>
 
-      <section className="mx-auto max-w-6xl px-6 py-24">
+      <section id="funciones" className="relative">
+        <ContainerScroll
+          titleComponent={
+            <>
+              <p className="text-gold-dark text-sm font-bold tracking-widest uppercase">El panel</p>
+              <h2 className="mt-2 mb-6 text-4xl font-bold md:text-6xl">
+                Una agenda que se entiende de un vistazo
+              </h2>
+            </>
+          }
+        >
+          <img
+            src="/img/panel-agenda.png"
+            alt="Agenda del panel de AgendIA con las reservas del día"
+            className="mx-auto h-full w-full rounded-2xl object-cover object-top"
+            draggable={false}
+          />
+        </ContainerScroll>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-24">
         <Reveal>
-          <h2 className="max-w-xl text-4xl font-bold">
+          <h2 className="mb-10 max-w-xl text-4xl font-bold">
             Lo esencial para que reserven en un minuto
           </h2>
         </Reveal>
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {FEATURES.map((f, i) => (
-            <Reveal key={f.title} delay={i * 0.12}>
-              <motion.article
-                whileHover={{ y: -6 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className="h-full rounded-xl bg-white p-6 shadow-sm hover:shadow-xl"
-              >
-                <div className="bg-gold/20 mb-4 flex h-12 w-12 items-center justify-center rounded-lg">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="text-gold-dark h-6 w-6"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden
-                  >
-                    <path d={f.icon} />
-                  </svg>
-                </div>
-                <h3 className="mb-2 text-xl font-bold">{f.title}</h3>
-                <p className="text-muted">{f.text}</p>
-              </motion.article>
-            </Reveal>
-          ))}
-        </div>
+        <Features />
       </section>
 
-      <section className="bg-white py-24">
+      <section id="como-empezar" className="bg-white py-24">
         <div className="mx-auto max-w-4xl px-6">
           <Reveal>
-            <h2 className="text-4xl font-bold">Así empiezas</h2>
+            <h2 className="mb-12 text-4xl font-bold">Así empiezas</h2>
           </Reveal>
-          <ol className="mt-12 space-y-10">
-            {STEPS.map(([title, text], i) => (
-              <Reveal key={title} y={40} delay={0.05}>
-                <li className="flex items-start gap-6">
-                  <span className="bg-ink text-gold flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl font-bold">
+          <TracingBeam className="px-6">
+            <ol className="space-y-24">
+              {STEPS.map(([title, text], i) => (
+                <li key={title}>
+                  <span className="bg-ink text-gold mb-4 inline-flex size-10 items-center justify-center rounded-full text-lg font-bold">
                     {i + 1}
                   </span>
-                  <div>
-                    <h3 className="text-2xl font-bold">{title}</h3>
-                    <p className="text-muted mt-1">{text}</p>
-                  </div>
+                  <h3 className="text-3xl font-bold">{title}</h3>
+                  <p className="text-muted mt-2 max-w-md text-lg">{text}</p>
                 </li>
-              </Reveal>
-            ))}
-          </ol>
+              ))}
+            </ol>
+          </TracingBeam>
         </div>
       </section>
 
-      <section className="px-6 py-24">
-        <Reveal
-          y={50}
-          className="bg-ink relative mx-auto max-w-5xl overflow-hidden rounded-2xl px-8 py-16 text-center text-white"
-        >
-          <motion.div
-            aria-hidden
-            animate={{ scale: [1, 1.25, 1], opacity: [0.35, 0.6, 0.35] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="bg-gold pointer-events-none absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full blur-3xl"
-          />
-          <h2 className="relative text-4xl font-bold">¿Listo para abrir tu agenda?</h2>
-          <p className="relative mx-auto mt-4 max-w-md text-stone-300">
-            Date de alta, completa la lista y publica cuando quieras.
-          </p>
-          <motion.div
-            whileHover={{ scale: 1.06 }}
-            whileTap={{ scale: 0.96 }}
-            className="relative mt-8 inline-block"
-          >
-            <Link
-              to="/alta"
-              className="bg-gold text-ink hover:bg-gold-dark inline-block rounded-md px-8 py-3 font-bold transition-colors"
-            >
-              Empezar ahora
-            </Link>
-          </motion.div>
-        </Reveal>
-      </section>
+      <div id="negocios" className="py-24">
+        <GlobeSection />
+      </div>
 
-      <footer className="text-muted pb-10 text-center text-sm">
+      <LampContainer className="min-h-[26rem] bg-ink">
+        <motion.div
+          initial={{ opacity: 0.5, y: 80 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.8, ease: "easeInOut" }}
+          className="text-center"
+        >
+          <h2 className="bg-gradient-to-br from-stone-100 to-stone-400 bg-clip-text text-4xl font-bold text-transparent md:text-6xl">
+            ¿Listo para abrir tu agenda?
+          </h2>
+          <Link
+            to="/alta"
+            className="bg-gold text-ink hover:bg-gold-dark mt-8 inline-block rounded-md px-8 py-3 font-bold transition-colors"
+          >
+            Empezar ahora
+          </Link>
+        </motion.div>
+      </LampContainer>
+
+      <footer className="bg-ink pb-6 text-center text-sm text-stone-400">
+        <div className="mx-auto h-40 max-w-3xl">
+          <TextHoverEffect text="AgendIA" />
+        </div>
         © AgendIA · Proyecto de portfolio
       </footer>
     </div>
-  );
-}
-
-/** Maqueta de la agenda para la portada: filas que entran una a una y burbuja del asistente. */
-function AgendaMock() {
-  const rows = [
-    ["10:00", "Corte + barba", "Marcos R.", "bg-gold/25"],
-    ["11:00", "Corte clásico", "Pablo S.", "bg-stone-100"],
-    ["12:30", "Arreglo de barba", "Iván L.", "bg-gold/25"],
-  ];
-  return (
-    <motion.div
-      animate={{ y: [0, -8, 0] }}
-      transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-      className="relative"
-    >
-      <div className="rounded-2xl bg-white p-5 shadow-2xl shadow-amber-900/10">
-        <div className="mb-4 flex items-center justify-between">
-          <strong>Hoy · Agenda</strong>
-          <span className="bg-gold/25 text-gold-dark rounded-full px-3 py-1 text-xs font-bold">
-            3 reservas
-          </span>
-        </div>
-        <ul className="space-y-3">
-          {rows.map(([time, service, who, bg], i) => (
-            <motion.li
-              key={time}
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.6 + i * 0.2, duration: 0.5 }}
-              className={`flex items-center gap-4 rounded-lg px-4 py-3 ${bg}`}
-            >
-              <span className="font-bold">{time}</span>
-              <span className="flex-1">{service}</span>
-              <span className="text-muted text-sm">{who}</span>
-            </motion.li>
-          ))}
-        </ul>
-      </div>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ delay: 1.5, type: "spring", stiffness: 200, damping: 16 }}
-        className="bg-ink absolute -bottom-6 -left-4 max-w-[15rem] rounded-2xl rounded-bl-sm px-4 py-3 text-sm text-white shadow-xl md:-left-10"
-      >
-        Tengo hueco mañana a las 17:30. ¿Te lo reservo?
-      </motion.div>
-    </motion.div>
   );
 }

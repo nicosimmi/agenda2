@@ -1,4 +1,6 @@
 import { motion } from "motion/react";
+import { Link } from "react-router-dom";
+import { AuroraBackground } from "@/components/ui/aurora-background";
 import { useState, type ComponentProps, type ReactNode } from "react";
 
 export const buttonClass =
@@ -20,23 +22,28 @@ export function Field({ label, ...props }: { label: string } & ComponentProps<"i
 
 export function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <main className="mx-auto max-w-md p-6 pt-16">
-      <motion.h1
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6 text-3xl font-bold"
-      >
-        {title}
-      </motion.h1>
-      <motion.div
-        initial={{ opacity: 0, y: 24, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ delay: 0.1, duration: 0.5 }}
-        className="space-y-4 rounded-lg bg-white p-6 shadow-sm"
-      >
-        {children}
-      </motion.div>
-    </main>
+    <AuroraBackground className="bg-cream text-ink h-auto min-h-screen">
+      <div className="relative z-10 w-full max-w-md p-6">
+        <Link to="/" className="mb-8 block text-2xl font-bold">
+          Agend<span className="text-gold-dark">IA</span>
+        </Link>
+        <motion.h1
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 text-3xl font-bold"
+        >
+          {title}
+        </motion.h1>
+        <motion.div
+          initial={{ opacity: 0, y: 24, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+          className="space-y-4 rounded-xl bg-white/90 p-6 shadow-xl shadow-amber-900/10 backdrop-blur"
+        >
+          {children}
+        </motion.div>
+      </div>
+    </AuroraBackground>
   );
 }
 
@@ -47,7 +54,7 @@ export function Section({ title, children }: { title: string; children: ReactNod
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.45, ease: "easeOut" }}
-      className="space-y-4 rounded-xl bg-white p-6 shadow-sm"
+      className="space-y-4 rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
     >
       <h2 className="text-xl font-bold">{title}</h2>
       {children}

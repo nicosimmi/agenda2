@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { Meteors } from "@/components/ui/meteors";
 import { api } from "../../api.ts";
 import { CountUp } from "../../motion.tsx";
 import type { Checklist, Profile } from "../../types.ts";
@@ -24,6 +25,7 @@ export function Inicio() {
   return (
     <>
       <div className="bg-ink relative overflow-hidden rounded-2xl p-8 text-white">
+        <Meteors number={14} />
         <motion.div
           aria-hidden
           animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.55, 0.3] }}

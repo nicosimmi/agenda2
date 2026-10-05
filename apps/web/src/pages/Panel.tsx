@@ -1,14 +1,24 @@
+import {
+  IconBuildingStore,
+  IconCalendarEvent,
+  IconCut,
+  IconHome,
+  IconLogout,
+  IconUsers,
+} from "@tabler/icons-react";
 import { AnimatePresence, motion } from "motion/react";
-import { Navigate, NavLink, useLocation, useOutlet } from "react-router-dom";
+import { Link, Navigate, useLocation, useOutlet } from "react-router-dom";
+import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { useAuth } from "../auth.tsx";
 
-const links = [
-  ["/panel", "Inicio"],
-  ["/panel/perfil", "Perfil"],
-  ["/panel/servicios", "Servicios"],
-  ["/panel/equipo", "Equipo"],
-  ["/panel/agenda", "Agenda"],
-] as const;
+const ICON = "size-5 shrink-0";
+const LINKS = [
+  { label: "Inicio", href: "/panel", end: true, icon: <IconHome className={ICON} /> },
+  { label: "Perfil", href: "/panel/perfil", icon: <IconBuildingStore className={ICON} /> },
+  { label: "Servicios", href: "/panel/servicios", icon: <IconCut className={ICON} /> },
+  { label: "Equipo", href: "/panel/equipo", icon: <IconUsers className={ICON} /> },
+  { label: "Agenda", href: "/panel/agenda", icon: <IconCalendarEvent className={ICON} /> },
+];
 
 export function Panel() {
   const { me, logout } = useAuth();
@@ -18,54 +28,44 @@ export function Panel() {
   if (me === undefined) return null;
   if (!me) return <Navigate to="/entrar" replace />;
   return (
-    <div className="mx-auto max-w-4xl p-4 sm:p-6">
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-ink sticky top-3 z-30 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl px-5 py-3 text-white shadow-lg"
-      >
-        <strong className="text-gold mr-2 text-lg">AgendIA</strong>
-        <nav className="flex flex-wrap gap-4">
-          {links.map(([to, label]) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === "/panel"}
-              className={({ isActive }) =>
-                `relative py-1 transition-colors ${isActive ? "text-gold" : "hover:text-gold"}`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  {label}
-                  {isActive && (
-                    <motion.span
-                      layoutId="nav-underline"
-                      className="bg-gold absolute inset-x-0 -bottom-0.5 h-0.5 rounded"
-                    />
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
-        <button onClick={logout} className="hover:text-gold ml-auto text-sm transition-colors">
-          Salir ({me.name})
-        </button>
-      </motion.header>
-      <main className="mt-6">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25 }}
-            className="space-y-6"
+    <div className="flex h-screen flex-col md:flex-row">
+      <Sidebar>
+        <SidebarBody className="bg-ink justify-between gap-8 text-stone-300">
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <Link to="/" className="text-gold mb-8 px-1 text-xl font-bold whitespace-nowrap">
+              A<span className="text-white">gendIA</span>
+            </Link>
+            <nav className="flex flex-col gap-1">
+              {LINKS.map((link) => (
+                <SidebarLink key={link.href} link={link} className="hover:text-gold px-1" />
+              ))}
+            </nav>
+          </div>
+          <button
+            onClick={logout}
+            aria-label={`Salir (${me.name})`}
+            className="hover:text-gold flex items-center gap-2 px-1 text-left text-sm whitespace-nowrap transition-colors"
           >
-            {outlet}
-          </motion.div>
-        </AnimatePresence>
+            <IconLogout className={ICON} />
+            <span className="truncate">Salir · {me.name}</span>
+          </button>
+        </SidebarBody>
+      </Sidebar>
+      <main className="flex-1 overflow-y-auto p-4 sm:p-8">
+        <div className="mx-auto max-w-4xl">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-6"
+            >
+              {outlet}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </main>
     </div>
   );
