@@ -16,3 +16,6 @@ test-results/
 
 # Notas personales de preparación de entrevistas (solo en local)
 docs/INTERVIEW_NOTES.md
+
+test-results/
+playwright-report/

@@ -38,6 +38,7 @@ export function Equipo() {
           reload={staff.reload}
         />
       ))}
+      <TimeOff staff={staff.data ?? []} />
       <Section title="Añadir profesional">
         <form onSubmit={add} className="flex items-end gap-4">
           <div className="flex-1">
@@ -207,5 +208,86 @@ function Hours({ staffId }: { staffId: string }) {
         {saved && <span role="status">Guardado</span>}
       </div>
     </div>
+  );
+}
+
+interface Absence {
+  id: string;
+  staffId: string | null;
+  startsAt: string;
+  endsAt: string;
+  reason: string | null;
+}
+
+const when = (iso: string) =>
+  new Date(iso).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" });
+
+function TimeOff({ staff }: { staff: Staff[] }) {
+  const { data, reload } = useApi<Absence[]>("/business/time-off");
+  const { error, run } = useAction();
+
+  async function add(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const f = new FormData(form);
+    const ok = await run(() =>
+      api("/business/time-off", {
+        method: "POST",
+        body: JSON.stringify({
+          staffId: f.get("staffId") || null,
+          startsAt: new Date(String(f.get("startsAt"))).toISOString(),
+          endsAt: new Date(String(f.get("endsAt"))).toISOString(),
+          reason: f.get("reason"),
+        }),
+      }),
+    );
+    if (ok) form.reset();
+    await reload();
+  }
+
+  return (
+    <Section title="Ausencias y cierres">
+      {data?.length === 0 && <p className="text-muted">No hay ausencias programadas.</p>}
+      <ul className="divide-y divide-stone-200">
+        {data?.map((a) => (
+          <li key={a.id} className="flex flex-wrap items-center gap-3 py-2">
+            <span>
+              <strong>{staff.find((s) => s.id === a.staffId)?.name ?? "Todo el negocio"}</strong> ·{" "}
+              {when(a.startsAt)} → {when(a.endsAt)}
+              {a.reason && <span className="text-muted"> · {a.reason}</span>}
+            </span>
+            <button
+              className={`${linkButton} ml-auto`}
+              onClick={async () => {
+                await run(() => api(`/business/time-off/${a.id}`, { method: "DELETE" }));
+                await reload();
+              }}
+            >
+              Quitar
+            </button>
+          </li>
+        ))}
+      </ul>
+      <form onSubmit={add} className="grid gap-4 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-sm font-semibold">Quién</span>
+          <select name="staffId" className={inputClass}>
+            <option value="">Todo el negocio</option>
+            {staff.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Field label="Motivo (opcional)" name="reason" />
+        <Field label="Desde" name="startsAt" type="datetime-local" required />
+        <Field label="Hasta" name="endsAt" type="datetime-local" required />
+        <FormError message={error} />
+        <div>
+          <button className={buttonClass}>Añadir ausencia</button>
+        </div>
+      </form>
+    </Section>
   );
 }

@@ -2,7 +2,7 @@
 
 Marketplace de reservas donde los negocios con citas (barberías, fisioterapia, pádel, estética…) se dan de alta y los clientes los buscan y reservan, bien con una interfaz clásica o con un **asistente de IA** que actúa mediante un **servidor MCP** propio. Proyecto de portfolio.
 
-> **Estado:** Fase 2 (auth, roles y aislamiento). Consulta `docs/PROGRESS.md`.
+> **Estado:** Fase 3 (panel del negocio). Consulta `docs/PROGRESS.md`.
 
 ## Documentación
 
@@ -71,6 +71,14 @@ Rutas disponibles por ahora: `GET /health`, `POST /auth/register|login|logout`, 
 
 La sesión va en una cookie `sid` HttpOnly. Las peticiones que cambian datos desde el navegador tienen que venir de un origen de `WEB_ORIGIN` (protección CSRF). Con `curl` no hace falta cabecera `Origin` mientras no se envíe la cookie.
 
+## Web
+
+```powershell
+pnpm --filter @agendia/web dev   # http://localhost:5173 (con la API en marcha)
+```
+
+La portada está en `/`, el acceso en `/entrar`, el alta de negocio en `/alta` y el panel en `/panel`. En desarrollo Vite reenvía `/api` a la API, así que la cookie de sesión es del mismo origen. Para verla desde el móvil: `pnpm exec vite --host` dentro de `apps/web`, y añade el origen de la IP del PC a `WEB_ORIGIN`.
+
 ## Calidad
 
 ```powershell
@@ -84,6 +92,15 @@ pnpm check          # todo lo anterior
 La suite de aislamiento (`apps/api/src/isolation.test.ts`) recorre una tabla con todas las rutas de la API: si se añade una ruta sin meterla en la tabla, o una ruta de cliente o de negocio sin su test de aislamiento, el CI falla.
 
 Los tests de integración usan Postgres real (la base `agendia_test`, que se crea sola), así que hace falta `docker compose up -d` antes de `pnpm test`.
+
+Prueba de extremo a extremo con Playwright (alta, configuración, publicación y reserva manual):
+
+```powershell
+pnpm --filter @agendia/web exec playwright install chromium   # solo la primera vez
+pnpm --filter @agendia/web e2e
+```
+
+Levanta su propia API (puerto 3100) y su propio Vite (5174), pero necesita Postgres migrado y usa la base de `.env`. No forma parte de `pnpm check`.
 
 Ningún test automático llama a un LLM real.
 
