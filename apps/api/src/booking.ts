@@ -222,9 +222,17 @@ export async function bookingSummary(db: Pick<Db, "select">, id: string) {
  * Crea una reserva `pending` que retiene el hueco PROPOSAL_TTL_MINUTES. No confirma nada: lo hace
  * `confirmProposal`, que en el producto solo se ejecuta cuando la persona pulsa "Confirmar".
  */
-export async function proposeCustomerBooking(db: Db, userId: string, input: Input) {
+export async function proposeCustomerBooking(
+  db: Db,
+  userId: string,
+  input: Input,
+  source: "web" | "agent" = "agent",
+) {
   try {
     return await db.transaction(async (tx) => {
+      // Cerrojo por persona: sin él, varias propuestas en paralelo leerían el mismo recuento y
+      // se saltarían el tope de pendientes (en READ COMMITTED no se ven entre sí).
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${"propose:" + userId}))`);
       const business = await publishedBusiness(tx, input.businessSlug);
       const day = localDate(input.startsAt, business.timezone);
       const { slots, service } = await findSlots(tx, business, {
@@ -268,7 +276,7 @@ export async function proposeCustomerBooking(db: Db, userId: string, input: Inpu
           startsAt: slot.startsAt,
           endsAt: slot.endsAt,
           status: "pending",
-          source: "agent",
+          source,
           expiresAt: new Date(Date.now() + PROPOSAL_TTL_MINUTES * 60_000),
         })
         .returning({ id: bookings.id });
@@ -291,6 +299,10 @@ export async function confirmProposal(db: Db, userId: string, id: string) {
         eq(bookings.customerId, userId),
         eq(bookings.status, "pending"),
         gt(bookings.expiresAt, new Date()),
+        // Una propuesta de una hora que ya ha empezado, o de un negocio suspendido entretanto,
+        // no puede convertirse en reserva.
+        gt(bookings.startsAt, new Date()),
+        sql`exists (select 1 from ${businesses} where ${businesses.id} = ${bookings.businessId} and ${businesses.status} = 'published')`,
       ),
     )
     .returning({ id: bookings.id });

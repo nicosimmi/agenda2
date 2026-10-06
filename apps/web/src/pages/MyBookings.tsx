@@ -47,10 +47,12 @@ const canChange = (b: MyBooking) =>
 
 function BookingCard({
   b,
+  onConfirm,
   onCancel,
   onMove,
 }: {
   b: MyBooking;
+  onConfirm: () => void;
   onCancel: () => void;
   onMove: () => void;
 }) {
@@ -102,6 +104,16 @@ function BookingCard({
         </p>
         {isUpcoming(b) && (
           <div className="mt-3 flex flex-wrap items-center gap-3">
+            {b.status === "pending" && b.expiresAt && (
+              <>
+                <button onClick={onConfirm} className={`${buttonClass} !px-3 !py-1.5 text-sm`}>
+                  Confirmar
+                </button>
+                <span className="text-muted text-sm">
+                  Propuesta retenida hasta las {timeIn(b.expiresAt, b.businessTimezone)}
+                </span>
+              </>
+            )}
             {changeable ? (
               <>
                 <button
@@ -154,6 +166,12 @@ export function MyBookings() {
     setMoving(null);
     setSlot(null);
     setAnyStaff(false);
+  };
+
+  // Una propuesta (por ejemplo, de un asistente de IA) retiene el hueco 10 minutos: aquí se confirma.
+  const doConfirm = async (b: MyBooking) => {
+    await run(() => api(`/me/bookings/${b.id}/confirm`, { method: "POST" }));
+    await bookings.reload();
   };
 
   const doCancel = async () => {
@@ -258,6 +276,7 @@ export function MyBookings() {
               <BookingCard
                 key={b.id}
                 b={b}
+                onConfirm={() => doConfirm(b)}
                 onCancel={() => setCancelling(b)}
                 onMove={() => setMoving(b)}
               />

@@ -188,7 +188,7 @@ async function alternatives(
     const res = await call<SlotsResponse>(
       api,
       "GET",
-      `/public/businesses/${businessSlug}/availability?${query}`,
+      `/public/businesses/${encodeURIComponent(businessSlug)}/availability?${query}`,
     );
     const target = new Date(around).getTime();
     const unique = [...new Map(res.slots.map((s) => [s.startsAt, s])).values()];
@@ -264,7 +264,7 @@ export function registerTools(server: McpServer, api: ApiClient, scopes: readonl
           slug: b.slug,
           name: plain(b.name),
           category: b.categoryName,
-          city: b.city,
+          city: plain(b.city, 100),
           address: plain(b.addressLine),
           fromPrice: b.minPriceCents === null ? null : euros(b.minPriceCents),
           description: untrusted(b.description, `negocio:${b.slug}:descripcion`, 160),
@@ -311,8 +311,8 @@ export function registerTools(server: McpServer, api: ApiClient, scopes: readonl
           [b.addressLine, b.postalCode, b.city, b.province].filter(Boolean).join(", "),
           200,
         ),
-        phone: b.contactPhone,
-        email: b.contactEmail,
+        phone: plain(b.contactPhone, 30),
+        email: plain(b.contactEmail, 254),
         timezone: b.timezone,
         openingHours: names.map((day, i) => ({
           day,

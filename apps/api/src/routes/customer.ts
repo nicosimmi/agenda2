@@ -113,11 +113,14 @@ export async function customerRoutes(app: FastifyInstance) {
     "/bookings/propose",
     { preHandler: requireScope("bookings:propose"), config: perUser("propose", 60) },
     async (req, reply) =>
-      reply
-        .status(201)
-        .send(
-          await proposeCustomerBooking(db, userOf(req).id, customerBookingSchema.parse(req.body)),
+      reply.status(201).send(
+        await proposeCustomerBooking(
+          db,
+          userOf(req).id,
+          customerBookingSchema.parse(req.body),
+          req.scopes ? "agent" : "web", // con token, la propuesta viene de un agente
         ),
+      ),
   );
 
   app.post("/bookings/:id/confirm", { preHandler: requireScope("bookings:confirm") }, async (req) =>

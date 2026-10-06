@@ -204,11 +204,16 @@ test("token para un asistente: se crea en la web, propone pero no confirma, y se
     ).status(),
   ).toBe(403);
 
-  // La propuesta aparece como pendiente en Mis reservas y la persona la puede cancelar
+  // La propuesta aparece como pendiente en Mis reservas: la confirma la persona con un clic
   await page.reload();
-  const card = page.getByRole("listitem").filter({ hasText: "Pendiente" });
-  await expect(card).toContainText("Corte de pelo");
-  await card.getByRole("button", { name: "Cancelar" }).click();
+  const pending = page.getByRole("listitem").filter({ hasText: "Pendiente" });
+  await expect(pending).toContainText("Corte de pelo");
+  await pending.getByRole("button", { name: "Confirmar" }).click();
+  const confirmed = page.getByRole("listitem").filter({ hasText: "Confirmada" });
+  await expect(confirmed).toContainText("Corte de pelo");
+
+  // Y la puede cancelar
+  await confirmed.getByRole("button", { name: "Cancelar" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Sí, cancelar" }).click();
 
   // Revocar el token lo deja sin acceso al momento

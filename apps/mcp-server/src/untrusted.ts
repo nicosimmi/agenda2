@@ -4,12 +4,20 @@
 // que el texto cierre la marca. La defensa de fondo es de arquitectura: ninguna herramienta que
 // el modelo tenga a su alcance puede confirmar nada sin el permiso `bookings:confirm`.
 
-// Caracteres de control, saltos de línea incluidos: un tercero no puede colar líneas nuevas.
-const CONTROL = /\p{Cc}/gu;
+// Caracteres de control (saltos de línea incluidos) y de formato (etiquetas TAG, bidi, ancho cero):
+// los segundos son invisibles para una persona pero un modelo puede leerlos.
+const CONTROL = /[\p{Cc}\p{Cf}]/gu;
 
 /** Texto corto escrito por un tercero (un nombre): sin saltos de línea ni etiquetas, y con tope. */
 export function plain(text: string | null | undefined, max = 80): string {
-  const clean = (text ?? "").replace(CONTROL, " ").replace(/[<>]/g, "").replace(/\s+/g, " ").trim();
+  // NFKC convierte los < > de ancho completo en los normales (que luego se quitan); y se eliminan
+  // los caracteres de formato (etiquetas TAG, bidi…), invisibles para una persona pero legibles para un modelo.
+  const clean = (text ?? "")
+    .normalize("NFKC")
+    .replace(CONTROL, " ")
+    .replace(/[<>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
   return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
 }
 

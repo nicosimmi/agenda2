@@ -433,11 +433,13 @@ export async function setBookingStatus(
   status: "cancelled" | "completed" | "no_show",
 ) {
   const [row] = await db
-    .select({ status: bookings.status, startsAt: bookings.startsAt })
+    .select({ status: bookings.status, startsAt: bookings.startsAt, expiresAt: bookings.expiresAt })
     .from(bookings)
     .where(and(eq(bookings.id, id), eq(bookings.businessId, t.businessId)));
   if (!row) throw notFound("Reserva");
-  if (row.status !== "pending" && row.status !== "confirmed") {
+  // Una propuesta que nadie confirmó a tiempo nunca llegó a ser una reserva.
+  const lapsed = row.status === "pending" && row.expiresAt !== null && row.expiresAt <= new Date();
+  if (lapsed || (row.status !== "pending" && row.status !== "confirmed")) {
     throw new AppError(409, "CONFLICT", "La reserva ya no admite cambios de estado");
   }
   if (status !== "cancelled" && row.startsAt > new Date()) {

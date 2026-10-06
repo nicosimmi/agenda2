@@ -260,3 +260,17 @@ Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. L
 ## F5-5. Pantalla de tokens en «Mis reservas»
 
 - **Decisión:** añadida para poder conectar un cliente real sin tocar la base de datos: tres presets (asistente, solo lectura, completo), caducidad elegible, el secreto se muestra una sola vez con un fragmento de configuración para Claude Desktop, y lista de tokens activos con su último uso y botón de revocar. No estaba en el SPEC; es pequeña y es la forma de usar la fase.
+
+## F5-6. Revisión cruzada de la Fase 5 (subagente sin contexto, Opus)
+
+No encontró escalada de permisos ni forma de que un token de leer y proponer reserve, confirme, cancele o mueva. Siete hallazgos, todos verificados en el código y corregidos con un test que los reproduce:
+
+1. **Límite de 3 propuestas saltable con concurrencia (media).** El recuento y el insert no estaban serializados. Ahora un cerrojo de transacción por persona (`pg_advisory_xact_lock`, el mismo patrón que la idempotencia) y lo mismo en el tope de 10 tokens. Una prueba paralela no reproducía la carrera de forma fiable, así que el test retiene el cerrojo desde otra conexión y comprueba que la propuesta espera (y que la de otra persona no); se comprobó que falla si se cambia la clave del cerrojo.
+2. **Texto de terceros sin marcar (media).** `city`, `contactPhone` y `contactEmail` llegaban al modelo tal cual. Ahora pasan por `plain()`, y el email de contacto se valida como email al guardarlo.
+3. **Propuestas sin sitio donde confirmarlas (media, producto).** El preset de asistente crea propuestas que la persona no podía confirmar hasta la Fase 6. Mis reservas muestra un botón «Confirmar» en las pendientes, con el plazo de retención.
+4. **La agenda del negocio veía las propuestas caducadas como `pending` (media-baja).** Ahora salen como `expired` y el negocio no puede marcarlas completadas ni «no se presentó».
+5. **Confirmar sin revalidar (baja).** La confirmación exige ahora que la cita no haya empezado y que el negocio siga publicado.
+6. **Caracteres invisibles (baja).** Se eliminan los de formato (etiquetas TAG, bidi, ancho cero) y se normaliza con NFKC, de modo que los `<` y `>` de ancho completo no sobreviven.
+7. **Menores:** `businessSlug` codificado también en `alternatives()`, `source` real de la propuesta (`agent` con token, `web` con sesión), `deleteOldTokens` ahora se usa al crear un token, y el test con el título equivocado se corrigió.
+
+**Aceptado sin cambios:** `/auth/me` responde a cualquier token (devuelve el email de la propia cuenta) y el servidor HTTP del MCP no valida `Host`, solo `Origin`: el token lo aporta el cliente y no es ambiental, así que no hay ataque de DNS rebinding útil.

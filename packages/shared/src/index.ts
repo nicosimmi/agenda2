@@ -57,7 +57,13 @@ export const businessProfileUpdateSchema = z
     province: optionalText(100),
     postalCode: optionalText(10),
     contactPhone: optionalText(30),
-    contactEmail: optionalText(254),
+    // Vacío borra el valor; si no, tiene que ser un email: el texto llega a clientes y al modelo (MCP).
+    contactEmail: z
+      .string()
+      .trim()
+      .max(254)
+      .refine((v) => v === "" || z.email().safeParse(v).success, "Email de contacto no válido")
+      .transform((v) => v || null),
     minNoticeMin: z
       .int()
       .min(0)

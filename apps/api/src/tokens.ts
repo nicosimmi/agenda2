@@ -23,32 +23,37 @@ export async function createApiToken(
   userId: string,
   input: { label: string; scopes: TokenScope[]; ttlMinutes: number },
 ) {
-  const now = new Date();
-  const [{ count } = { count: 0 }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(apiTokens)
-    .where(and(eq(apiTokens.userId, userId), active(now)));
-  if (count >= MAX_ACTIVE_TOKENS) {
-    throw new AppError(
-      409,
-      "CONFLICT",
-      `Ya tienes ${MAX_ACTIVE_TOKENS} tokens activos. Revoca alguno`,
-    );
-  }
-  const token = TOKEN_PREFIX + randomBytes(32).toString("base64url");
-  const expiresAt = new Date(now.getTime() + input.ttlMinutes * 60_000);
-  const [row] = await db
-    .insert(apiTokens)
-    .values({
-      userId,
-      tokenHash: hashToken(token),
-      label: input.label,
-      scopes: input.scopes,
-      expiresAt,
-    })
-    .returning({ id: apiTokens.id });
-  // El token en claro solo se devuelve aquí, una vez.
-  return { id: row!.id, token, label: input.label, scopes: input.scopes, expiresAt };
+  await deleteOldTokens(db);
+  return db.transaction(async (tx) => {
+    // Cerrojo por persona: dos peticiones a la vez no pueden pasar el tope de tokens activos.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${"token:" + userId}))`);
+    const now = new Date();
+    const [{ count } = { count: 0 }] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(apiTokens)
+      .where(and(eq(apiTokens.userId, userId), active(now)));
+    if (count >= MAX_ACTIVE_TOKENS) {
+      throw new AppError(
+        409,
+        "CONFLICT",
+        `Ya tienes ${MAX_ACTIVE_TOKENS} tokens activos. Revoca alguno`,
+      );
+    }
+    const token = TOKEN_PREFIX + randomBytes(32).toString("base64url");
+    const expiresAt = new Date(now.getTime() + input.ttlMinutes * 60_000);
+    const [row] = await tx
+      .insert(apiTokens)
+      .values({
+        userId,
+        tokenHash: hashToken(token),
+        label: input.label,
+        scopes: input.scopes,
+        expiresAt,
+      })
+      .returning({ id: apiTokens.id });
+    // El token en claro solo se devuelve aquí, una vez.
+    return { id: row!.id, token, label: input.label, scopes: input.scopes, expiresAt };
+  });
 }
 
 export interface TokenAuth {
