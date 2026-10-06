@@ -7,6 +7,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { newBookingCode } from "./db/booking-code.ts";
 
 import {
+  agentEvents,
   bookings,
   businessMembers,
   businesses,
@@ -60,6 +61,8 @@ const ROUTES: Record<string, RouteSpec> = {
   "GET /public/businesses": { access: "public" },
   "GET /public/businesses/:slug": { access: "public" },
   "GET /public/businesses/:slug/availability": { access: "public" },
+  "GET /public/chat": { access: "public" },
+  "POST /public/chat": { access: "public" },
   "POST /auth/register": { access: "public" },
   "POST /auth/login": { access: "public" },
   "POST /auth/logout": { access: "public" },
@@ -117,6 +120,50 @@ const ROUTES: Record<string, RouteSpec> = {
       ).json();
       expect((await send("DELETE", `/me/tokens/${created.id}`, f.customer2)).statusCode).toBe(404);
       expect((await send("DELETE", `/me/tokens/${created.id}`, f.customer1)).statusCode).toBe(204);
+    },
+  },
+  "POST /me/agent/actions/:id/confirm": {
+    access: "customer",
+    sample: () => "/me/agent/actions/00000000-0000-4000-8000-000000000000/confirm",
+    isolation: async (f) => {
+      // Una propuesta que no es de tu chat no existe para ti, la tenga quien la tenga.
+      const res = await send(
+        "POST",
+        "/me/agent/actions/00000000-0000-4000-8000-000000000000/confirm",
+        f.customer1,
+        {
+          sessionId: "00000000-0000-4000-8000-000000000000",
+        },
+      );
+      expect(res.statusCode).toBe(404);
+    },
+  },
+  "POST /me/agent/actions/:id/discard": {
+    access: "customer",
+    sample: () => "/me/agent/actions/00000000-0000-4000-8000-000000000000/discard",
+    isolation: async (f) => {
+      const res = await send(
+        "POST",
+        "/me/agent/actions/00000000-0000-4000-8000-000000000000/discard",
+        f.customer1,
+        {
+          sessionId: "00000000-0000-4000-8000-000000000000",
+        },
+      );
+      expect(res.statusCode).toBe(404);
+    },
+  },
+  "GET /business/agent-events": {
+    access: "business_owner",
+    isolation: async (f) => {
+      await t.db.insert(agentEvents).values([
+        { sessionId: "s1", businessId: f.businessA.id, type: "proposal" },
+        { sessionId: "s2", businessId: f.businessB.id, type: "confirmation" },
+      ]);
+      const a = await get("/business/agent-events?businessId=" + f.businessB.id, f.ownerA);
+      expect(a.map((e: { type: string }) => e.type)).toEqual(["proposal"]);
+      const b = await get("/business/agent-events", f.ownerB);
+      expect(b.map((e: { type: string }) => e.type)).toEqual(["confirmation"]);
     },
   },
   "POST /me/bookings/propose": {
