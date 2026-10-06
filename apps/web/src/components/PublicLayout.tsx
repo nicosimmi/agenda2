@@ -2,6 +2,7 @@ import { motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { StickyBanner } from "@/components/ui/sticky-banner";
+import { ChatWidget } from "./ChatWidget.tsx";
 import { SearchDialog } from "./SearchDialog.tsx";
 import { SiteFooter } from "./SiteFooter.tsx";
 import { SiteNav } from "./SiteNav.tsx";
@@ -52,6 +53,7 @@ export function PublicLayout() {
         <Outlet />
       </motion.main>
       <SiteFooter />
+      <ChatWidget />
       <SearchDialog open={searching} onClose={closeSearch} />
     </div>
   );

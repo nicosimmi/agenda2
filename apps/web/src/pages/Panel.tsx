@@ -2,6 +2,7 @@ import {
   IconBuildingStore,
   IconCalendarEvent,
   IconCut,
+  IconMessageChatbot,
   IconHome,
   IconLogout,
   IconUsers,
@@ -21,6 +22,7 @@ const PANEL_FAQ: Record<string, string> = {
   "/panel/servicios": "panelServicios",
   "/panel/equipo": "panelEquipo",
   "/panel/agenda": "panelAgenda",
+  "/panel/asistente": "panelAsistente",
 };
 
 const ICON = "size-5 shrink-0";
@@ -30,6 +32,7 @@ const LINKS = [
   { label: "Servicios", href: "/panel/servicios", icon: <IconCut className={ICON} /> },
   { label: "Equipo", href: "/panel/equipo", icon: <IconUsers className={ICON} /> },
   { label: "Agenda", href: "/panel/agenda", icon: <IconCalendarEvent className={ICON} /> },
+  { label: "Asistente", href: "/panel/asistente", icon: <IconMessageChatbot className={ICON} /> },
 ];
 
 export function Panel() {

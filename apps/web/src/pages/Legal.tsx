@@ -115,8 +115,12 @@ export function Privacy() {
       </p>
       <h2>Inteligencia artificial</h2>
       <p>
-        El asistente conversacional todavía no está disponible. Cuando lo esté, sus conversaciones
-        las procesará un proveedor de IA externo y se avisará antes de usarlo.
+        El asistente de reservas es una IA de un tercero (Anthropic). Lo que escribes en el chat se
+        le envía para generar la respuesta, junto con los datos que el propio asistente consulta
+        para ayudarte (negocios, servicios y huecos y, si has iniciado sesión, tus reservas). No
+        escribas datos sensibles. AgendIA guarda un registro de lo que hace el asistente (qué
+        herramienta usó y cuándo, sin el texto de la conversación) y lo limita por uso y gasto. El
+        asistente nunca confirma una reserva por su cuenta: lo haces tú con un botón.
       </p>
       <p>
         Antes de usar AgendIA con personas reales habría que revisar las obligaciones legales,

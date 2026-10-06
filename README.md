@@ -115,6 +115,26 @@ Para probarlo:
 
 Sin token solo hay lectura pública. Un token caduca (1 hora por defecto) y se puede revocar; nunca puede crear otros tokens. El texto que escriben los negocios llega marcado como `<dato_no_confiable>` para que el modelo no lo trate como instrucciones. Limitación conocida: un cliente con un token de «acceso completo» también ve las herramientas `confirm_*`.
 
+## Asistente de IA
+
+La web incluye un chat (botón «Asistente», abajo a la derecha) que busca negocios, mira huecos y **prepara** una reserva, una cancelación o un cambio de hora. No la hace: la tarjeta que aparece tiene un botón «Confirmar» y solo ese clic ejecuta la acción. Está en `apps/api/src/agent`.
+
+Cómo está montado, de dentro afuera:
+
+- El modelo se llama a través de una interfaz propia, `LlmProvider`. Hay tres implementaciones: Anthropic, un guion de demostración y un modelo simulado para los tests (ningún test llama a un LLM real).
+- Cada chat abre una conexión MCP para el modelo con un token de `read` + `propose`, de una hora y propio de la persona. Esa conexión no tiene herramientas `confirm_*`; el servidor ni siquiera las intenta si el modelo las nombra.
+- La tarjeta se construye con lo que devolvió la API, no con el texto del modelo. La acción queda guardada en la sesión del chat.
+- El botón llama a `POST /me/agent/actions/:id/confirm` (solo con la sesión del navegador de un cliente; un token no puede). El servicio abre entonces otra conexión con un token de `confirm` de cinco minutos, ejecuta y lo revoca.
+- Límites: 1000 caracteres por mensaje, 8 herramientas por turno, 60 s por turno, 12 mensajes cada 10 minutos por chat, 20 peticiones por minuto por IP, y topes de gasto diarios (global, por persona y por chat) calculados con los tokens que guarda `agent_events`.
+- Si no hay proveedor (sin clave), si se alcanza el tope o si el modelo falla, el chat lo dice y enlaza con el buscador de siempre. El resto de la web no depende de él.
+
+Para activarlo en local, en `.env`:
+
+- **Con la API de Anthropic:** pon `ANTHROPIC_API_KEY`. Antes, fija un límite de gasto en la consola de Anthropic y un `LLM_DAILY_BUDGET_EUR` bajo. El modelo por defecto es `claude-opus-5-5` con esfuerzo `low` (`LLM_MODEL`, `LLM_EFFORT`).
+- **Sin clave:** `LLM_PROVIDER=demo` usa un guion fijo (no es un modelo) que recorre todo el flujo: busca, mira huecos, propone y espera tu clic. No se admite en producción.
+
+El negocio ve en **Panel → Asistente** qué ha hecho el asistente en su negocio (consultas, propuestas, confirmaciones), sin el texto de las conversaciones.
+
 ## Calidad
 
 ```powershell

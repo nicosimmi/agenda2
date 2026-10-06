@@ -274,3 +274,46 @@ No encontró escalada de permisos ni forma de que un token de leer y proponer re
 7. **Menores:** `businessSlug` codificado también en `alternatives()`, `source` real de la propuesta (`agent` con token, `web` con sesión), `deleteOldTokens` ahora se usa al crear un token, y el test con el título equivocado se corrigió.
 
 **Aceptado sin cambios:** `/auth/me` responde a cualquier token (devuelve el email de la propia cuenta) y el servidor HTTP del MCP no valida `Host`, solo `Origin`: el token lo aporta el cliente y no es ambiental, así que no hay ataque de DNS rebinding útil.
+
+## F6-1. Dónde vive el servicio del agente
+
+- **Decisión:** dentro de `apps/api` (`src/agent`), no en un proceso aparte. Habla con el MCP por un transporte en memoria y llama a la API con `app.inject`, pasando la IP real de la persona para que los límites por IP sigan valiendo.
+- **Por qué:** un servicio más habría duplicado la autenticación, el despliegue y los tests para una app con un solo proceso. El MCP sigue siendo un cliente delgado de la API, así que el agente pasa por las mismas reglas que cualquier cliente externo.
+- **Ponytail:** las sesiones de chat viven en memoria del proceso (una instancia). Con varias instancias habría que moverlas a Redis o a la base de datos.
+
+## F6-2. Dos conexiones: el modelo propone, el clic confirma
+
+- **Decisión:** la conexión del modelo se crea por chat con un token `bookings:read` + `bookings:propose` de 60 minutos. Al pulsar el botón se abre otra con un token `bookings:confirm` de 5 minutos que se revoca al terminar.
+- **Por qué:** la seguridad no depende del prompt. Aunque el modelo se confundiera o un negocio intentara inyectarle instrucciones, `confirm_*` no existe en su conexión.
+- **Detalle:** si el modelo nombra una herramienta que su conexión no ofrece, ni se intenta: se devuelve un error al modelo y se registra `tool_blocked`.
+
+## F6-3. La tarjeta sale de la API
+
+- **Decisión:** el servicio construye la tarjeta con el resultado de `propose_*` y guarda la acción (`actionId`) en la sesión. El texto del modelo no puede cambiarla.
+- **Confirmar y descartar:** `POST /me/agent/actions/:id/confirm|discard` con `{sessionId}`. Exigen sesión de navegador de un cliente, y la acción solo vale en el chat y para la persona que la generó (otro usuario o chat recibe 404). La acción se marca como usada antes de ejecutar, así que un doble clic no confirma dos veces; si la API la rechaza, vuelve a estar abierta.
+
+## F6-4. Streaming
+
+- **Decisión:** Server-Sent Events sobre un `POST` (`/public/chat`), con `reply.hijack()` para escribir la respuesta. El cliente usa `fetch` y no `EventSource`, porque este solo hace GET. Eventos: `start`, `text`, `tool`, `proposal`, `done`, `error`.
+- **Cierre del navegador:** si la persona cierra el chat a mitad, se aborta la llamada al modelo y el turno se deshace.
+
+## F6-5. Proveedor de modelo y coste
+
+- **Decisión:** `claude-opus-5-5`, esfuerzo `low`, sin `tool_choice` forzado (el modelo lo rechaza) y con la parte estable del prompt marcada para caché. El historial no se recorta: editar turnos anteriores invalidaría el razonamiento guardado. Al llegar a 40 mensajes se pide empezar otro chat.
+- **Tope de gasto:** se calcula con los tokens que se guardan en `agent_events` y los precios de `LLM_PRICE_*` (por defecto 3,7 y 18,5 EUR por millón de tokens, aproximados). Tres topes diarios: global (2 EUR), por persona (0,5) y por chat (0,2). Antes de cada llamada al modelo se comprueban.
+- **Sin verificar:** no hay `ANTHROPIC_API_KEY` en este entorno, así que ninguna llamada real se ha probado. La parte de Anthropic se ha probado con un cliente simulado. No se activó la beta de modelos de reserva (`fallbacks`) porque no se puede comprobar sin clave.
+
+## F6-6. Modelo de demostración
+
+- **Decisión:** `LLM_PROVIDER=demo` sigue un guion fijo (buscar, servicios, huecos, proponer). No es un modelo y se dice en el código y en el README. Sirve para enseñar el flujo y para el E2E de Playwright sin gasto. Se rechaza al arrancar si `NODE_ENV=production`.
+
+## F6-7. Registro del agente y panel del negocio
+
+- **Decisión:** cada mensaje, turno del modelo, llamada a herramienta, propuesta, confirmación y descarte se guarda en `agent_events` con tokens y latencia. Se resuelven `businessId` y `bookingId` para que `GET /business/agent-events` muestre al propietario solo lo de su negocio.
+- **Privacidad:** esa ruta devuelve solo tipo, herramienta, reserva y fecha. No hay texto de conversaciones ni identificadores de personas. El texto del mensaje del usuario no se guarda (solo su longitud).
+
+## F6-8. Mitigación de inyección en el agente
+
+- Texto de terceros: llega envuelto como `<dato_no_confiable>` desde el MCP (F5-4), y el prompt dice que es información, no instrucciones.
+- Sin autoridad: el modelo no tiene `confirm_*`, no controla la tarjeta y no elige el negocio de ninguna consulta (el tenant sale de la sesión).
+- Tope de herramientas por turno y de tamaño de cada resultado (12 000 caracteres).
