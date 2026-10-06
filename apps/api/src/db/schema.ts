@@ -335,3 +335,23 @@ export const sessions = pgTable(
   },
   (t) => [index("sessions_user_idx").on(t.userId)],
 );
+
+// Tokens de acceso para clientes MCP y agentes (SPEC §9). Como las sesiones, solo se guarda el hash
+// SHA-256. Llevan permisos concretos (scopes) y caducan: un token filtrado hace poco daño.
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    label: text("label").notNull(),
+    scopes: text("scopes").array().notNull(),
+    expiresAt: instant("expires_at").notNull(),
+    revokedAt: instant("revoked_at"),
+    lastUsedAt: instant("last_used_at"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("api_tokens_user_idx").on(t.userId)],
+);
