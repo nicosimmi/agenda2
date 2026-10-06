@@ -5,7 +5,7 @@
 //   bookings:confirm  confirmar propuestas y reservar, cancelar o mover directamente
 // Una sesión de navegador no tiene permisos acotados: puede todo lo que permita su rol.
 import { createHash } from "node:crypto";
-import { customerBookingSchema, rescheduleSchema } from "@agendia/shared";
+import { TOKEN_SCOPES, customerBookingSchema, rescheduleSchema } from "@agendia/shared";
 import { desc, eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
@@ -40,6 +40,12 @@ const perUser = (prefix: string, max: number) => ({
 export async function customerRoutes(app: FastifyInstance) {
   const { db } = app;
   app.addHook("preHandler", requireRole("customer"));
+
+  // Quién es y qué puede hacer la conexión actual: el servidor MCP lo usa para decidir qué herramientas ofrecer.
+  app.get("/token", async (req) => ({
+    user: { name: userOf(req).name },
+    scopes: req.scopes ?? [...TOKEN_SCOPES], // una sesión de navegador no tiene permisos acotados
+  }));
 
   app.get("/bookings", { preHandler: requireScope("bookings:read") }, async (req) => {
     const rows = await db

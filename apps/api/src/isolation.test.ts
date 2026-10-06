@@ -79,6 +79,13 @@ const ROUTES: Record<string, RouteSpec> = {
     },
   },
 
+  "GET /me/token": {
+    access: "customer",
+    isolation: async (f) => {
+      expect((await get("/me/token", f.customer1)).user.name).toBe("c1");
+      expect((await get("/me/token", f.customer2)).user.name).toBe("c2");
+    },
+  },
   "GET /me/tokens": {
     access: "customer",
     isolation: async (f) => {

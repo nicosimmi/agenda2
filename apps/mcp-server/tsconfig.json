@@ -1,4 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"],
+    // Los tipos del SDK de MCP no cumplen esta opción estricta (propiedades opcionales con undefined).
+    "exactOptionalPropertyTypes": false
+  },
   "include": ["src"]
 }
