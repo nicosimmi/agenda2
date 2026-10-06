@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../../api.ts";
+import { BlockSkeleton } from "../../components/Skeleton.tsx";
 import type { Profile } from "../../types.ts";
 import { buttonClass, Field, FormError, inputClass, Section, useAction } from "../../ui.tsx";
 import { useApi } from "../../useApi.ts";
@@ -18,7 +19,7 @@ export function Perfil() {
   const { data, reload } = useApi<Profile>("/business/profile");
   const { error, run } = useAction();
   const [saved, setSaved] = useState(false);
-  if (!data) return null;
+  if (!data) return <BlockSkeleton rows={6} />;
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

@@ -160,8 +160,9 @@ const ITEMS = [
     className: "md:col-span-2",
   },
   {
-    title: "Un asistente que propone",
-    description: "Busca huecos por ti. La reserva solo se confirma cuando pulsas el botón.",
+    title: "Un asistente que propone, muy pronto",
+    description:
+      "Buscará huecos por ti. La reserva solo se confirmará cuando pulses el botón.",
     header: <Chat />,
     icon: <IconMessageChatbot className={ICON} />,
   },

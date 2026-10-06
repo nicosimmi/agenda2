@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import { api } from "../../api.ts";
+import { BlockSkeleton } from "../../components/Skeleton.tsx";
 import type { Service } from "../../types.ts";
 import { buttonClass, Field, FormError, linkButton, Section, useAction } from "../../ui.tsx";
 import { useApi } from "../../useApi.ts";
@@ -8,7 +9,7 @@ const euros = (cents: number) =>
   (cents / 100).toLocaleString("es-ES", { minimumFractionDigits: 2 });
 
 export function Servicios() {
-  const { data, reload } = useApi<Service[]>("/business/services");
+  const { data, loading, reload } = useApi<Service[]>("/business/services");
   const { error, run } = useAction();
 
   async function add(e: FormEvent<HTMLFormElement>) {
@@ -38,6 +39,7 @@ export function Servicios() {
   return (
     <>
       <Section title="Servicios">
+        {loading && <BlockSkeleton rows={3} />}
         {data?.length === 0 && <p className="text-muted">Aún no tienes servicios.</p>}
         <ul className="divide-y divide-line">
           {data?.map((s) => (

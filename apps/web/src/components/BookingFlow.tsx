@@ -371,7 +371,7 @@ export function BookingFlow({ business }: { business: BusinessDetail }) {
                       ].map(([k, v]) => (
                         <div key={k} className="flex justify-between gap-4 px-4 py-2.5">
                           <dt className="text-muted">{k}</dt>
-                          <dd className="text-right font-semibold capitalize">{v}</dd>
+                          <dd className="text-right font-semibold">{v}</dd>
                         </div>
                       ))}
                     </dl>

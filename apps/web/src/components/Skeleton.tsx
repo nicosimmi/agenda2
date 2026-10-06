@@ -72,3 +72,16 @@ export function PageLoader() {
     </div>
   );
 }
+
+/** Tarjeta del panel mientras cargan sus datos: título y filas con el brillo de carga. */
+export function BlockSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div aria-hidden className="border-line bg-surface space-y-4 rounded-xl border p-6">
+      <Loading />
+      <Skeleton className="h-6 w-1/3" />
+      {Array.from({ length: rows }, (_, i) => (
+        <Skeleton key={i} className="h-10" />
+      ))}
+    </div>
+  );
+}

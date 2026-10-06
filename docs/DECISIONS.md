@@ -195,3 +195,34 @@ Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. L
 - **Componentes usados (17):** navbar redimensionable, banner fijo, rayos de fondo, texto que rota, botón magnético, borde animado, tarjeta 3D, cinta infinita, tablet con scroll, bento, haz que traza el scroll, globo 3D, lámpara, texto con efecto, aurora, barra lateral y meteoros. Se probó `card-spotlight` en el panel y se descartó: su efecto es para fondos oscuros y sobre tarjetas blancas deja una mancha gris.
 - **Adaptaciones al código copiado:** colores a la paleta; `infinite-moving-cards` duplica con React (clonaba nodos del DOM y rompía con StrictMode); `3d-globe` sin el fallback `<Html>` de drei (su desmontaje lanzaba un error de React) y con las texturas de la Tierra autoalojadas en `public/textures` (el original las pedía a unpkg.com); `sidebar` usa `NavLink` de React Router y `aria-label` (con la barra cerrada el texto está oculto y el enlace se quedaba sin nombre accesible).
 - **Peso:** el globo y three.js (≈940 kB, 250 kB comprimidos) van en un trozo aparte que solo se descarga al llegar a esa sección.
+
+## F4-1. Buscador sobre Postgres
+
+- **Decisión:** `searchBusinesses` (apps/api/src/search.ts) combina tres condiciones sobre el nombre y el texto del negocio: coincidencia de texto completo en español sin tildes (`websearch_to_tsquery` sobre el `search_vector`), parecido por trigramas (`word_similarity` > 0,45, para erratas como «califo») y subcadena. La ciudad es una subcadena sin tildes ni mayúsculas. Solo salen negocios `published`. Se ordena por relevancia si hay texto y por nombre si no.
+- **Por qué `strpos` y no `LIKE`:** el texto del usuario no puede colar comodines (`%`, `_`).
+- **Contrato:** la firma admite añadir `near` y orden por distancia sin cambiar a los consumidores (SPEC §7).
+
+## F4-2. Reservas del cliente
+
+- **Decisión:** `POST /me/bookings` confirma al instante (`confirmed`, origen `web`) tras **revalidar el hueco con el motor de disponibilidad dentro de la transacción**; la restricción de exclusión de Postgres es la última defensa y se traduce a 409. Sin profesional elegido se asigna el primero libre.
+- **Idempotencia:** la cabecera `Idempotency-Key` es obligatoria (1–255 caracteres). Se guarda una huella del método, la ruta y el cuerpo: la misma clave con otro cuerpo es un 422. Era un pendiente anotado en la Fase 2.
+- **Cancelar y mover:** solo reservas propias (si no, 404) y hasta `cancelLimitHours` antes de la cita. Mover vuelve a validar el hueco excluyendo la propia reserva.
+- **Propuestas caducadas:** se pasan a `expired` dentro de la transacción antes de insertar, para que no bloqueen el hueco (pendiente anotado en la Fase 3).
+- **Rutas públicas:** el SPEC listaba `/services|staff|faq` por separado; van incluidas en la ficha (`GET /public/businesses/:slug`) para ahorrar viajes. La ficha pasa a `/n/:slug` en la web.
+
+## F4-3. Modo oscuro por variables semánticas
+
+- **Contexto:** el desarrollador pidió un interruptor claro/oscuro con sol y luna.
+- **Decisión:** los colores que cambian con el tema son variables CSS (`page`, `surface`, `surface-2`, `fg`, `muted`, `line`, `gold-dark`) definidas en `:root` y `.dark`; `ink` (carbón de los bloques siempre oscuros y texto sobre dorado) y `gold` son fijos. `dark:` responde a la clase `dark`, no al sistema, para que mande el interruptor. Un script en `index.html` aplica el tema antes de pintar. El dorado de texto sube a `#8f6a1a` en claro (4,9:1) y el hover de los botones usa `gold-hover` (el carbón sobre `#8f6a1a` no llegaba a 4,5:1).
+- **Persistencia:** `localStorage` (`agendia-theme`), con la preferencia del sistema como valor inicial y tolerancia a que el almacenamiento falle.
+
+## F4-4. Piezas transversales de la interfaz
+
+- **Decisión:** aviso de cookies (solo informa: AgendIA usa únicamente la cookie de sesión y guarda el tema; no hay nada opcional que rechazar), botón de subir con anillo de progreso, buscador rápido (`/` o el icono), esqueletos de carga y barra de progreso entre páginas, preguntas frecuentes en cada página (`faqs.ts`) y páginas de cookies y privacidad. Las páginas se cargan por trozos (`React.lazy`).
+- **Aplazado:** el SPEC pide los textos de la interfaz en un único fichero; siguen en los componentes. Moverlos es mecánico y no cambia el comportamiento.
+- **Honestidad del producto:** el asistente de IA aún no existe (Fase 6), así que la portada lo presenta como «muy pronto» y la maqueta del hero lo marca como vista previa.
+
+## F4-5. El E2E del cliente depende del seed
+
+- **Decisión:** `cliente.spec.ts` usa los negocios de demostración (Barbería El Califa). Antes de la primera ejecución hace falta `pnpm --filter @agendia/api db:seed`. El E2E del propietario crea su propio negocio y no lo necesita.
+- **Carrera corregida:** `useApi` descarta las respuestas antiguas; sin eso, al cambiar de día en la agenda la respuesta lenta del día anterior podía pisar la nueva.

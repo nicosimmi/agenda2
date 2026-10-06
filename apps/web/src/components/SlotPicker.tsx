@@ -162,7 +162,7 @@ export function SlotPicker({
           transition={{ duration: 0.18 }}
           className="mt-4 space-y-4"
         >
-          {day && <p className="text-muted text-sm capitalize">{longDay(day)}</p>}
+          {day && <p className="text-muted text-sm">{longDay(day)}</p>}
           {groups.map(
             ([label, list]) =>
               list.length > 0 && (

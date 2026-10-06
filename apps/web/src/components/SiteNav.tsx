@@ -27,7 +27,8 @@ export function Logo({ className = "" }: { className?: string }) {
   );
 }
 
-const pill = "rounded-full bg-ink px-4 py-2 text-sm font-bold text-white transition-colors";
+const pill =
+  "rounded-full bg-ink px-4 py-2 text-sm font-bold text-white transition-colors dark:bg-gold dark:text-ink";
 
 /** Menú superior: en escritorio una píldora que se encoge al bajar; en móvil y tableta, un menú plegable. */
 export function SiteNav({ onSearch }: { onSearch: () => void }) {
@@ -58,7 +59,9 @@ export function SiteNav({ onSearch }: { onSearch: () => void }) {
             <IconSearch className="size-5" />
           </button>
           <ThemeToggle />
-          {me ? (
+          {me === undefined ? (
+            <span className="inline-block h-9 w-40" aria-hidden />
+          ) : me ? (
             <>
               {account && (
                 <Link to={account.to} className="hover:text-gold-dark transition-colors">
@@ -68,7 +71,7 @@ export function SiteNav({ onSearch }: { onSearch: () => void }) {
               <button
                 type="button"
                 onClick={logout}
-                className={`${pill} hover:bg-gold hover:text-ink cursor-pointer`}
+                className={`${pill} hover:bg-gold hover:text-ink dark:hover:bg-gold-hover cursor-pointer`}
               >
                 Salir
               </button>
@@ -78,7 +81,10 @@ export function SiteNav({ onSearch }: { onSearch: () => void }) {
               <Link to="/entrar" className="hover:text-gold-dark transition-colors">
                 Entrar
               </Link>
-              <Link to="/registro" className={`${pill} hover:bg-gold hover:text-ink`}>
+              <Link
+                to="/registro"
+                className={`${pill} hover:bg-gold hover:text-ink dark:hover:bg-gold-hover`}
+              >
                 Crear cuenta
               </Link>
             </>
@@ -111,7 +117,9 @@ export function SiteNav({ onSearch }: { onSearch: () => void }) {
           <Link to="/alta" onClick={close} className="font-semibold">
             Para negocios
           </Link>
-          {me ? (
+          {me === undefined ? (
+            <span className="inline-block h-9 w-40" aria-hidden />
+          ) : me ? (
             <>
               {account && (
                 <Link to={account.to} onClick={close} className="font-semibold">

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../../api.ts";
+import { BlockSkeleton } from "../../components/Skeleton.tsx";
 import type { Service, Shift, Staff } from "../../types.ts";
 import {
   buttonClass,
@@ -30,6 +31,7 @@ export function Equipo() {
 
   return (
     <>
+      {staff.loading && <BlockSkeleton rows={3} />}
       {staff.data?.map((member) => (
         <Member
           key={member.id}

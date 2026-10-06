@@ -119,6 +119,9 @@ export function AgendaMock() {
           </AnimatePresence>
         </div>
       </div>
+      <p className="text-muted mt-3 text-center text-xs">
+        Vista previa del asistente de IA, que llegará más adelante.
+      </p>
     </div>
   );
 }

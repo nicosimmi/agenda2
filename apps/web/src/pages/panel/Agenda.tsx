@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../../api.ts";
+import { BlockSkeleton } from "../../components/Skeleton.tsx";
 import type { Booking, Service, Staff } from "../../types.ts";
 import {
   buttonClass,
@@ -91,6 +92,7 @@ export function Agenda() {
             </select>
           </label>
         </div>
+        {bookings.loading && <BlockSkeleton rows={2} />}
         {bookings.data?.length === 0 && <p className="text-muted">No hay reservas este día.</p>}
         <ul className="divide-y divide-line">
           {bookings.data?.map((b) => (

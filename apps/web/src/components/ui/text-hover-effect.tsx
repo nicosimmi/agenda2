@@ -19,6 +19,7 @@ export const TextHoverEffect = ({
   useEffect(() => {
     if (svgRef.current && cursor.x !== null && cursor.y !== null) {
       const svgRect = svgRef.current.getBoundingClientRect();
+      if (!svgRect.width || !svgRect.height) return; // oculto (display: none): no hay nada que medir
       const cxPercentage = ((cursor.x - svgRect.left) / svgRect.width) * 100;
       const cyPercentage = ((cursor.y - svgRect.top) / svgRect.height) * 100;
       setMaskPosition({

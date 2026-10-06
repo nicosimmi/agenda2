@@ -31,13 +31,17 @@ export const dayNumber = (day: string) => Number(day.slice(8, 10));
 export const monthShort = (day: string) =>
   asDate(day).toLocaleDateString("es-ES", { month: "short", timeZone: "UTC" }).replace(".", "");
 
+const cap = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 export const longDay = (day: string) =>
-  asDate(day).toLocaleDateString("es-ES", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-  });
+  cap(
+    asDate(day).toLocaleDateString("es-ES", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      timeZone: "UTC",
+    }),
+  );
 
 export const timeIn = (iso: string, timeZone: string) =>
   new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZone });
