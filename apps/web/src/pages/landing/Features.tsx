@@ -161,8 +161,7 @@ const ITEMS = [
   },
   {
     title: "Un asistente que propone, muy pronto",
-    description:
-      "Buscará huecos por ti. La reserva solo se confirmará cuando pulses el botón.",
+    description: "Buscará huecos por ti. La reserva solo se confirmará cuando pulses el botón.",
     header: <Chat />,
     icon: <IconMessageChatbot className={ICON} />,
   },
