@@ -1,0 +1,184 @@
+// Reservas del cliente (/me/bookings): crear, cancelar y mover. Cada operación revalida el hueco
+// con el motor de disponibilidad dentro de la transacción; la restricción de exclusión de
+// Postgres es la última defensa si dos personas reservan a la vez (se traduce a 409).
+import type { customerBookingSchema, rescheduleSchema } from "@agendia/shared";
+import { localDate } from "@agendia/core";
+import { and, eq, lt } from "drizzle-orm";
+import type { z } from "zod";
+import { findSlots, type BusinessRow } from "./availability.ts";
+import { newBookingCode } from "./db/booking-code.ts";
+import type { Db } from "./db/client.ts";
+import { bookings, businesses, staff } from "./db/schema.ts";
+import { AppError, notFound, pgErrorCode } from "./errors.ts";
+import type { StoredResponse } from "./idempotency.ts";
+
+type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+const taken = () => new AppError(409, "CONFLICT", "Ese hueco ya no está disponible. Elige otro");
+
+/** Negocio publicado por slug: un negocio en borrador o suspendido ni se ve ni admite reservas. */
+async function publishedBusiness(tx: Tx, slug: string): Promise<BusinessRow> {
+  const [business] = await tx
+    .select()
+    .from(businesses)
+    .where(and(eq(businesses.slug, slug), eq(businesses.status, "published")));
+  if (!business) throw notFound("Negocio");
+  return business;
+}
+
+/** Una propuesta caducada sigue bloqueando el hueco hasta que pase a `expired`. */
+async function expireStalePending(tx: Tx, staffId: string) {
+  await tx
+    .update(bookings)
+    .set({ status: "expired" })
+    .where(
+      and(
+        eq(bookings.staffId, staffId),
+        eq(bookings.status, "pending"),
+        lt(bookings.expiresAt, new Date()),
+      ),
+    );
+}
+
+type Input = z.infer<typeof customerBookingSchema>;
+
+export async function createCustomerBooking(
+  tx: Tx,
+  userId: string,
+  input: Input,
+): Promise<StoredResponse> {
+  const business = await publishedBusiness(tx, input.businessSlug);
+  const day = localDate(input.startsAt, business.timezone);
+  const { slots, service } = await findSlots(tx, business, {
+    serviceId: input.serviceId,
+    staffId: input.staffId,
+    from: day,
+    to: day,
+  });
+  if (!service) throw notFound("Servicio");
+  // Sin profesional elegido, se asigna el primero libre a esa hora (orden estable por nombre).
+  const slot = slots.find((s) => s.startsAt.getTime() === input.startsAt.getTime());
+  if (!slot) throw taken();
+
+  await expireStalePending(tx, slot.staffId);
+  try {
+    const [row] = await tx
+      .insert(bookings)
+      .values({
+        businessId: business.id,
+        code: newBookingCode(),
+        staffId: slot.staffId,
+        serviceId: service.id,
+        customerId: userId,
+        notes: input.notes,
+        startsAt: slot.startsAt,
+        endsAt: slot.endsAt,
+        status: "confirmed",
+        source: "web",
+      })
+      .returning({ id: bookings.id, code: bookings.code });
+    const [member] = await tx
+      .select({ name: staff.name })
+      .from(staff)
+      .where(eq(staff.id, slot.staffId));
+    return {
+      status: 201,
+      body: {
+        id: row!.id,
+        code: row!.code,
+        status: "confirmed",
+        startsAt: slot.startsAt,
+        businessName: business.name,
+        businessSlug: business.slug,
+        serviceName: service.name,
+        staffName: member?.name ?? "",
+      },
+    };
+  } catch (error) {
+    if (pgErrorCode(error) === "23P01") throw taken();
+    throw error;
+  }
+}
+
+/** Reserva propia, con los datos del negocio que hacen falta para aplicar sus reglas. */
+async function ownBooking(tx: Tx, userId: string, id: string) {
+  const [row] = await tx
+    .select({
+      booking: bookings,
+      business: businesses,
+    })
+    .from(bookings)
+    .innerJoin(businesses, eq(businesses.id, bookings.businessId))
+    .where(and(eq(bookings.id, id), eq(bookings.customerId, userId)));
+  if (!row) throw notFound("Reserva");
+  return row;
+}
+
+function assertChangeable(row: Awaited<ReturnType<typeof ownBooking>>) {
+  const { booking, business } = row;
+  if (booking.status !== "pending" && booking.status !== "confirmed") {
+    throw new AppError(409, "CONFLICT", "Esta reserva ya no admite cambios");
+  }
+  const limitMs = business.cancelLimitHours * 3_600_000;
+  if (booking.startsAt.getTime() - Date.now() < limitMs) {
+    throw new AppError(
+      409,
+      "CONFLICT",
+      `Ya no se puede cambiar por la web (límite: ${business.cancelLimitHours} h antes). Contacta con el negocio`,
+    );
+  }
+}
+
+export async function cancelCustomerBooking(db: Db, userId: string, id: string) {
+  return db.transaction(async (tx) => {
+    const row = await ownBooking(tx, userId, id);
+    assertChangeable(row);
+    await tx
+      .update(bookings)
+      .set({ status: "cancelled", updatedAt: new Date() })
+      .where(eq(bookings.id, id));
+    return { id, status: "cancelled" as const };
+  });
+}
+
+type Reschedule = z.infer<typeof rescheduleSchema>;
+
+export async function rescheduleCustomerBooking(
+  db: Db,
+  userId: string,
+  id: string,
+  input: Reschedule,
+) {
+  try {
+    return await db.transaction(async (tx) => {
+      const row = await ownBooking(tx, userId, id);
+      assertChangeable(row);
+      const { booking, business } = row;
+      const day = localDate(input.startsAt, business.timezone);
+      const { slots } = await findSlots(tx, business, {
+        serviceId: booking.serviceId,
+        // Si no se indica otro profesional, se intenta primero con el mismo.
+        staffId: input.staffId ?? booking.staffId,
+        from: day,
+        to: day,
+        excludeBookingId: booking.id,
+      });
+      const slot = slots.find((s) => s.startsAt.getTime() === input.startsAt.getTime());
+      if (!slot) throw taken();
+      await expireStalePending(tx, slot.staffId);
+      await tx
+        .update(bookings)
+        .set({
+          staffId: slot.staffId,
+          startsAt: slot.startsAt,
+          endsAt: slot.endsAt,
+          updatedAt: new Date(),
+        })
+        .where(eq(bookings.id, id));
+      return { id, status: booking.status, startsAt: slot.startsAt };
+    });
+  } catch (error) {
+    if (pgErrorCode(error) === "23P01") throw taken();
+    throw error;
+  }
+}

@@ -56,6 +56,10 @@ const RANGE = "from=2030-01-01T00:00:00Z&to=2030-01-31T00:00:00Z";
 const ROUTES: Record<string, RouteSpec> = {
   "GET /health": { access: "public" },
   "OPTIONS *": { access: "public" }, // preflight de CORS
+  "GET /public/categories": { access: "public" },
+  "GET /public/businesses": { access: "public" },
+  "GET /public/businesses/:slug": { access: "public" },
+  "GET /public/businesses/:slug/availability": { access: "public" },
   "POST /auth/register": { access: "public" },
   "POST /auth/login": { access: "public" },
   "POST /auth/logout": { access: "public" },
@@ -72,6 +76,48 @@ const ROUTES: Record<string, RouteSpec> = {
     isolation: async (f) => {
       const res = await get("/me/bookings", f.customer1);
       expect(res.map((b: { id: string }) => b.id)).toEqual([f.bookingALater, f.bookingA]);
+    },
+  },
+
+  "POST /me/bookings": {
+    access: "customer",
+    isolation: async (f) => {
+      // Un customerId en el cuerpo se ignora y un hueco inexistente no crea nada.
+      const res = await t.app.inject({
+        method: "POST",
+        url: "/me/bookings",
+        cookies: f.customer1,
+        headers: { origin: WEB_ORIGIN, "idempotency-key": "k1" },
+        payload: {
+          businessSlug: "negocio-b",
+          serviceId: f.serviceB,
+          startsAt: "2030-01-10T11:00:00Z",
+          customerId: "00000000-0000-4000-8000-000000000000",
+        },
+      });
+      expect(res.statusCode).toBe(409);
+      expect(await get("/me/bookings", f.customer2)).toHaveLength(1);
+    },
+  },
+  "POST /me/bookings/:id/cancel": {
+    access: "customer",
+    sample: (f) => `/me/bookings/${f.bookingB}/cancel`,
+    isolation: async (f) => {
+      // bookingB es de customer2: customer1 no la ve (404) y sigue confirmada.
+      const res = await send("POST", `/me/bookings/${f.bookingB}/cancel`, f.customer1);
+      expect(res.statusCode).toBe(404);
+      const [row] = await t.db.select().from(bookings).where(eq(bookings.id, f.bookingB));
+      expect(row?.status).toBe("confirmed");
+    },
+  },
+  "POST /me/bookings/:id/reschedule": {
+    access: "customer",
+    sample: (f) => `/me/bookings/${f.bookingB}/reschedule`,
+    isolation: async (f) => {
+      const res = await send("POST", `/me/bookings/${f.bookingB}/reschedule`, f.customer1, {
+        startsAt: "2030-01-11T10:00:00Z",
+      });
+      expect(res.statusCode).toBe(404);
     },
   },
 

@@ -61,6 +61,14 @@ export function localToUtc(date: string, time: string, timeZone: string): Date {
   return new Date(wall - offsetAtGuess);
 }
 
+/** Fecha local ("YYYY-MM-DD") de un instante en la zona del negocio. */
+export function localDate(instant: Date, timeZone: string): string {
+  const parts = formatterFor(timeZone).formatToParts(instant);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    String(parts.find((part) => part.type === type)?.value).padStart(2, "0");
+  return `${get("year").padStart(4, "0")}-${get("month")}-${get("day")}`;
+}
+
 /** Día de la semana ISO (1 = lunes … 7 = domingo) de una fecha local. */
 export function isoWeekday(date: string): number {
   const [year, month, day] = parseDate(date);
