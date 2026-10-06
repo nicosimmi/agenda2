@@ -1,7 +1,7 @@
 # PROGRESS
 
 **Última actualización:** 2026-10-02 · Claude Code (Sonnet 5.5)
-**Fase actual:** 3 — Panel del negocio (rama `fase-3/panel-negocio`) **Estado:** en curso. Tanda 1 (API) terminada; falta la tanda 2 (interfaz en `apps/web`, que está vacío).
+**Fase actual:** 3 — Panel del negocio (rama `fase-3/panel-negocio`) **Estado:** terminada, a falta de confirmar el merge a `main` y la etiqueta `fase-3`. Siguiente: Fase 4 (buscador y reserva del cliente).
 
 ## Hecho
 
