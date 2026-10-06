@@ -5,6 +5,7 @@ import { Link, Navigate } from "react-router-dom";
 import { api } from "../api.ts";
 import { useAuth } from "../auth.tsx";
 import { Faq } from "../components/Faq.tsx";
+import { TokenManager } from "../components/TokenManager.tsx";
 import { Modal } from "../components/Modal.tsx";
 import { Loading, PageLoader, Skeleton } from "../components/Skeleton.tsx";
 import { SlotPicker } from "../components/SlotPicker.tsx";
@@ -264,6 +265,8 @@ export function MyBookings() {
           </AnimatePresence>
         </ul>
       </div>
+
+      <TokenManager />
 
       <Faq items={FAQ.misReservas!} className="mt-16" />
 

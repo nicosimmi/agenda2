@@ -8,7 +8,8 @@ const WEB_PORT = 5174;
 
 export default defineConfig({
   testDir: "e2e",
-  timeout: 30_000,
+  globalSetup: "./e2e/warmup.ts",
+  timeout: 45_000,
   use: { baseURL: `http://localhost:${WEB_PORT}`, trace: "retain-on-failure" },
   webServer: [
     {

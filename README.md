@@ -2,7 +2,7 @@
 
 Marketplace de reservas donde los negocios con citas (barberías, fisioterapia, pádel, estética…) se dan de alta y los clientes los buscan y reservan, bien con una interfaz clásica o con un **asistente de IA** que actúa mediante un **servidor MCP** propio. Proyecto de portfolio.
 
-> **Estado:** Fase 4 (búsqueda y reserva del cliente). Consulta `docs/PROGRESS.md`.
+> **Estado:** Fase 5 (servidor MCP). Consulta `docs/PROGRESS.md`.
 
 ## Documentación
 
@@ -80,6 +80,40 @@ pnpm --filter @agendia/web dev   # http://localhost:5173 (con la API en marcha)
 La portada está en `/`, la búsqueda en `/buscar`, la ficha de un negocio en `/n/:slug`, el acceso en `/entrar`, el alta de cliente en `/registro`, el alta de negocio en `/alta`, las reservas del cliente en `/mis-reservas` y el panel en `/panel`. El interruptor sol/luna cambia el tema y la tecla `/` abre el buscador rápido. En desarrollo Vite reenvía `/api` a la API, así que la cookie de sesión es del mismo origen. Para verla desde el móvil: `pnpm exec vite --host` dentro de `apps/web`, y añade el origen de la IP del PC a `WEB_ORIGIN`.
 
 Los componentes visuales de `apps/web/src/components/ui` son de [Aceternity UI](https://ui.aceternity.com) (código abierto que se copia al repo, no una dependencia), con los colores adaptados a la paleta. Llevan `@ts-nocheck` y están fuera del lint. La imagen del tablet de la portada es una captura real del panel (`public/img/panel-agenda.png`).
+
+## Servidor MCP
+
+`apps/mcp-server` expone la plataforma a clientes compatibles con [MCP](https://modelcontextprotocol.io) (Claude Desktop, el inspector de MCP, el agente de la web). Es un cliente delgado de la API: no tiene lógica propia, así que las reglas de aislamiento, permisos y disponibilidad son las de la API.
+
+| Permiso del token   | Herramientas que ofrece                                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| ninguno (sin token) | `search_businesses`, `get_business_info`, `list_services`, `list_staff`, `check_availability`, `search_faq` |
+| `bookings:read`     | `list_my_bookings`                                                                                          |
+| `bookings:propose`  | `propose_booking` (y `propose_cancellation` y `propose_reschedule`, con `read`)                             |
+| `bookings:confirm`  | `confirm_booking`, `confirm_cancellation`, `confirm_reschedule`                                             |
+
+Reservar es siempre en dos pasos: una **propuesta** retiene el hueco 10 minutos pero no es una reserva; solo la **confirmación**, con otro permiso, la hace definitiva. A la conexión de un modelo se le dan solo `read` y `propose`, así que no puede reservar ni aunque lo intente.
+
+Para probarlo:
+
+1. Entra en la web con una cuenta de cliente y, en **Mis reservas → Conectar un asistente de IA**, crea un token (el preset «Para un asistente de IA» sirve) y cópialo: solo se muestra una vez.
+2. Configura tu cliente MCP con el servidor stdio (la web te da el fragmento para Claude Desktop):
+
+```json
+{
+  "mcpServers": {
+    "agendia": {
+      "command": "node",
+      "args": ["RUTA/AL/PROYECTO/apps/mcp-server/src/stdio.ts"],
+      "env": { "AGENDIA_API_URL": "http://localhost:3000", "AGENDIA_TOKEN": "agt_…" }
+    }
+  }
+}
+```
+
+3. También hay una versión HTTP sin estado para servicios (`pnpm --filter @agendia/mcp-server start:http`, puerto `MCP_PORT`, solo en `127.0.0.1`). Cada petición lleva su token en `Authorization: Bearer …`.
+
+Sin token solo hay lectura pública. Un token caduca (1 hora por defecto) y se puede revocar; nunca puede crear otros tokens. El texto que escriben los negocios llega marcado como `<dato_no_confiable>` para que el modelo no lo trate como instrucciones. Limitación conocida: un cliente con un token de «acceso completo» también ve las herramientas `confirm_*`.
 
 ## Calidad
 
