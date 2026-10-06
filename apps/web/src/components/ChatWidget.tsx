@@ -31,6 +31,8 @@ const SUGGESTIONS = [
 export function ChatWidget() {
   const [status, setStatus] = useState<Status | null>(null);
   const [open, setOpen] = useState(false);
+  const { me } = useAuth();
+  const chat = useAgentChat(me?.id);
 
   // Si el asistente no está disponible (sin clave de API, por ejemplo) simplemente no se ofrece.
   useEffect(() => {
@@ -59,26 +61,30 @@ export function ChatWidget() {
         )}
       </AnimatePresence>
       <AnimatePresence>
-        {open && <ChatPanel maxChars={status.maxMessageChars} onClose={() => setOpen(false)} />}
+        {open && (
+          <ChatPanel chat={chat} maxChars={status.maxMessageChars} onClose={() => setOpen(false)} />
+        )}
       </AnimatePresence>
     </>
   );
 }
 
-function ChatPanel({ maxChars, onClose }: { maxChars: number; onClose: () => void }) {
+function ChatPanel({
+  chat,
+  maxChars,
+  onClose,
+}: {
+  chat: ReturnType<typeof useAgentChat>;
+  maxChars: number;
+  onClose: () => void;
+}) {
   const { me } = useAuth();
   const { pathname, search } = useLocation();
-  const chat = useAgentChat(me?.id);
   const [draft, setDraft] = useState("");
   const input = useRef<HTMLTextAreaElement>(null);
   const log = useRef<HTMLDivElement>(null);
 
   useEffect(() => input.current?.focus(), []);
-  useEffect(() => {
-    const onKey = (e: globalThis.KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
   // Sigue el final de la conversación mientras llega la respuesta.
   useEffect(() => {
     log.current?.scrollTo({ top: log.current.scrollHeight });
@@ -104,6 +110,7 @@ function ChatPanel({ maxChars, onClose }: { maxChars: number; onClose: () => voi
     <motion.section
       role="dialog"
       aria-label="Asistente de reservas"
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
       initial={{ opacity: 0, y: 24, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 24, scale: 0.97 }}

@@ -145,7 +145,8 @@ function toLlmError(error: unknown): Error {
   if (error instanceof Anthropic.APIError) {
     return new LlmError("El asistente no ha podido responder", (error.status ?? 500) >= 500);
   }
-  return error instanceof Error ? error : new Error("Error desconocido del asistente");
+  // Cualquier otro error puede llevar datos internos (o la clave): no sale tal cual.
+  return new LlmError("El asistente ha tenido un problema");
 }
 
 export interface Prices {

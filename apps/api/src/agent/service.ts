@@ -44,6 +44,8 @@ export interface AgentConfig {
   /** Mensajes por chat en una ventana de tiempo. */
   sessionRate: { max: number; windowMs: number };
   idleSessionMs: number;
+  /** Chats vivos a la vez en esta instancia (los anónimos eligen su propio id). */
+  maxSessions: number;
   timeZone: string;
 }
 
@@ -62,6 +64,7 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   maxSessionMessages: 40,
   sessionRate: { max: 12, windowMs: 10 * 60_000 },
   idleSessionMs: 30 * 60_000,
+  maxSessions: 500,
   timeZone: "Europe/Madrid",
 };
 
@@ -99,6 +102,7 @@ interface AgentAction {
 }
 
 interface ModelConnection {
+  createdAt: number;
   client: Client;
   tools: LlmTool[];
   tokenId: string | null;
@@ -267,6 +271,7 @@ export function createAgentService(app: FastifyInstance, db: Db, config: AgentCo
     const { client, close } = await connect(session.ip, token);
     const { tools } = await client.listTools();
     return {
+      createdAt: Date.now(),
       client,
       tokenId,
       tools: tools.map((t) => ({
@@ -306,6 +311,19 @@ export function createAgentService(app: FastifyInstance, db: Db, config: AgentCo
   ): Promise<Session> {
     let session = sessions.get(sessionId);
     if (!session) {
+      if (sessions.size >= config.maxSessions) {
+        throw new AppError(
+          429,
+          "RATE_LIMITED",
+          "El asistente está muy ocupado. Inténtalo más tarde",
+        );
+      }
+      // Un chat vivo por persona: así los tokens internos de chats abandonados no se acumulan.
+      if (userId) {
+        for (const other of [...sessions.values()]) {
+          if (other.userId === userId && !other.busy) await dropSession(other);
+        }
+      }
       session = {
         id: sessionId,
         userId,
@@ -458,7 +476,7 @@ export function createAgentService(app: FastifyInstance, db: Db, config: AgentCo
         payload: { reason: error instanceof Error ? error.message.slice(0, 200) : "error" },
       });
     }
-    const related = await relatedIds(input);
+    const related = out.isError ? {} : await relatedIds(input);
     await log(session, {
       type: "tool_call",
       toolName: name.slice(0, 80),
@@ -526,7 +544,17 @@ export function createAgentService(app: FastifyInstance, db: Db, config: AgentCo
       });
       return;
     }
-    if (await overBudget(session)) {
+    session.busy = true;
+    session.turnTimes.push(now);
+    let over: boolean;
+    try {
+      over = await overBudget(session);
+    } catch (error) {
+      session.busy = false;
+      throw error;
+    }
+    if (over) {
+      session.busy = false;
       await log(session, { type: "blocked", payload: { reason: "budget" } });
       emit({
         type: "error",
@@ -537,14 +565,18 @@ export function createAgentService(app: FastifyInstance, db: Db, config: AgentCo
       return;
     }
 
-    session.busy = true;
     session.lastUsed = now;
-    session.turnTimes.push(now);
     const historyStart = session.messages.length;
+    let inFlight = false;
     const timeout = AbortSignal.timeout(config.turnTimeoutMs);
     const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
 
     try {
+      // El token del chat dura 60 minutos: se renueva antes de que caduque.
+      if (session.connection && Date.now() - session.connection.createdAt > 50 * 60_000) {
+        await session.connection.close();
+        session.connection = null;
+      }
       session.connection ??= await modelConnection(session);
       const connection = session.connection;
       emit({ type: "start", sessionId: session.id });
@@ -557,6 +589,7 @@ export function createAgentService(app: FastifyInstance, db: Db, config: AgentCo
       for (;;) {
         if (signal.aborted) throw signal.reason ?? new Error("abortado");
         const started = Date.now();
+        inFlight = true;
         const result = await provider.complete(
           {
             system: buildSystemPrompt({
@@ -571,6 +604,7 @@ export function createAgentService(app: FastifyInstance, db: Db, config: AgentCo
           },
           (delta) => emit({ type: "text", delta }),
         );
+        inFlight = false;
         await log(session, {
           type: "assistant_turn",
           payload: { stopReason: result.stopReason, provider: provider.name },
@@ -653,9 +687,20 @@ export function createAgentService(app: FastifyInstance, db: Db, config: AgentCo
       if (!refused) emit({ type: "done" });
     } catch (error) {
       // Se deshace el turno a medias: el historial nunca queda con una llamada sin su resultado.
+      // Una llamada cortada se cobra igual: se anota una estimación de la entrada (≈3 caracteres por
+      // token) para que el tope de gasto la vea.
+      const estimate = inFlight ? Math.ceil(JSON.stringify(session.messages).length / 3) : 0;
       session.messages.length = historyStart;
       const aborted = signal.aborted;
-      if (options.signal?.aborted) return; // el cliente se fue
+      if (options.signal?.aborted) {
+        // el cliente se fue
+        await log(session, {
+          type: "error",
+          payload: { kind: "aborted" },
+          ...(estimate ? { tokensIn: estimate } : {}),
+        });
+        return;
+      }
       const kind: ErrorKind = aborted ? "timeout" : "llm";
       const messageText = aborted
         ? "El asistente tarda demasiado. Inténtalo de nuevo o usa la búsqueda de siempre"
@@ -665,6 +710,7 @@ export function createAgentService(app: FastifyInstance, db: Db, config: AgentCo
       await log(session, {
         type: "error",
         payload: { kind, detail: error instanceof Error ? error.message.slice(0, 200) : "error" },
+        ...(estimate ? { tokensIn: estimate } : {}),
       });
       emit({ type: "error", code: kind, message: messageText });
     } finally {
@@ -675,7 +721,7 @@ export function createAgentService(app: FastifyInstance, db: Db, config: AgentCo
 
   // --- el clic en «Confirmar» o «Cancelar» ---
 
-  async function takeAction(sessionId: string, userId: string, actionId: string) {
+  function takeAction(sessionId: string, userId: string, actionId: string) {
     const session = sessions.get(sessionId);
     if (!session || session.userId !== userId) throw notFound("Conversación");
     if (session.busy)
@@ -700,29 +746,27 @@ export function createAgentService(app: FastifyInstance, db: Db, config: AgentCo
     actionId: string;
     ip: string;
   }) {
-    const { session, action } = await takeAction(
-      options.sessionId,
-      options.userId,
-      options.actionId,
-    );
+    const { session, action } = takeAction(options.sessionId, options.userId, options.actionId);
     action.state = "used"; // se marca antes de ejecutar: un doble clic no puede ejecutar dos veces
-
-    // Conexión de confirmación: token solo de confirmar, de cinco minutos, que se revoca al acabar.
-    const token = await createApiToken(db, options.userId, {
-      label: "Asistente (confirmación)",
-      scopes: ["bookings:confirm"],
-      ttlMinutes: 5,
-    });
-    const { client, close } = await connect(options.ip, token.token);
+    session.busy = true; // y el chat no escribe en el historial mientras se confirma
+    let done = false;
+    let token: Awaited<ReturnType<typeof createApiToken>> | null = null;
+    let connection: Awaited<ReturnType<typeof connect>> | null = null;
     try {
-      const res = (await client.callTool({ name: action.tool, arguments: action.args })) as {
-        isError?: boolean;
-        content?: { text?: string }[];
-      };
+      // Conexión de confirmación: token solo de confirmar, de cinco minutos, que se revoca al acabar.
+      token = await createApiToken(db, options.userId, {
+        label: "Asistente (confirmación)",
+        scopes: ["bookings:confirm"],
+        ttlMinutes: 5,
+      });
+      connection = await connect(options.ip, token.token);
+      const res = (await connection.client.callTool({
+        name: action.tool,
+        arguments: action.args,
+      })) as { isError?: boolean; content?: { text?: string }[] };
       const body = (res.content ?? []).map((c) => c.text ?? "").join("\n");
       const related = await relatedIds({ bookingId: action.bookingId });
       if (res.isError) {
-        action.state = "open"; // no se hizo: puede reintentarse o descartarse
         await log(session, {
           type: "confirmation",
           toolName: action.tool,
@@ -731,6 +775,7 @@ export function createAgentService(app: FastifyInstance, db: Db, config: AgentCo
         });
         throw new AppError(409, "CONFLICT", body || "No se pudo completar la acción");
       }
+      done = true;
       await log(session, {
         type: "confirmation",
         toolName: action.tool,
@@ -745,24 +790,28 @@ export function createAgentService(app: FastifyInstance, db: Db, config: AgentCo
       session.lastUsed = Date.now();
       return { kind: action.kind, result: parseJson(body) };
     } finally {
-      await close();
-      await revokeApiToken(db, options.userId, token.id).catch(() => undefined);
+      // Si no se hizo (la API la rechazó o algo falló antes), la propuesta sigue abierta para reintentar.
+      if (!done) action.state = "open";
+      session.busy = false;
+      await connection?.close();
+      if (token) await revokeApiToken(db, options.userId, token.id).catch(() => undefined);
     }
   }
 
   async function discardAction(options: { sessionId: string; userId: string; actionId: string }) {
-    const { session, action } = await takeAction(
-      options.sessionId,
-      options.userId,
-      options.actionId,
-    );
+    const { session, action } = takeAction(options.sessionId, options.userId, options.actionId);
     action.state = "discarded";
-    const related = await relatedIds({ bookingId: action.bookingId });
-    await log(session, { type: "discarded", payload: { kind: action.kind }, ...related });
-    session.messages.push({
-      role: "user",
-      content: "[Sistema] El usuario ha descartado la propuesta; no se ha hecho nada.",
-    });
+    session.busy = true;
+    try {
+      const related = await relatedIds({ bookingId: action.bookingId });
+      await log(session, { type: "discarded", payload: { kind: action.kind }, ...related });
+      session.messages.push({
+        role: "user",
+        content: "[Sistema] El usuario ha descartado la propuesta; no se ha hecho nada.",
+      });
+    } finally {
+      session.busy = false;
+    }
   }
 
   return {

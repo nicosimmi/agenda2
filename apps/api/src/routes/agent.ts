@@ -55,7 +55,8 @@ export async function agentPublicRoutes(
       try {
         await service.chat({
           sessionId: body.sessionId,
-          userId: req.user?.role === "customer" ? req.user.id : null,
+          // Solo la sesión del navegador de un cliente; un token de acceso no abre un chat con su cuenta.
+          userId: req.user?.role === "customer" && req.scopes === null ? req.user.id : null,
           ip: req.ip,
           message: body.message,
           emit,

@@ -1,7 +1,7 @@
 # PROGRESS
 
 **Última actualización:** 2026-10-06 · Claude Code (Sonnet 5.5)
-**Fase actual:** 6 — Agente en la web (rama `fase-6/agente-web`) **Estado:** terminada a falta de la revisión cruzada y de tu confirmación para el merge. Las Fases 3, 4 y 5 están integradas y etiquetadas.
+**Fase actual:** 6 — Agente en la web (rama `fase-6/agente-web`) **Estado:** terminada, con la revisión cruzada corregida (F6-9), a falta de tu confirmación para el merge. Las Fases 3, 4 y 5 están integradas y etiquetadas.
 
 ## Hecho
 

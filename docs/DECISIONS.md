@@ -317,3 +317,20 @@ No encontró escalada de permisos ni forma de que un token de leer y proponer re
 - Texto de terceros: llega envuelto como `<dato_no_confiable>` desde el MCP (F5-4), y el prompt dice que es información, no instrucciones.
 - Sin autoridad: el modelo no tiene `confirm_*`, no controla la tarjeta y no elige el negocio de ninguna consulta (el tenant sale de la sesión).
 - Tope de herramientas por turno y de tamaño de cada resultado (12 000 caracteres).
+
+## F6-9. Revisión cruzada de la Fase 6 (subagente sin contexto, Opus)
+
+No encontró ningún camino para que el modelo confirme sin el clic. Hallazgos corregidos, cada uno con un test:
+
+1. **Gasto de llamadas cortadas (alta).** Si el cliente cerraba o saltaba el tiempo, no se guardaban tokens y el tope no se enteraba. Ahora se anota una estimación de la entrada (≈3 caracteres por token) también al abortar o fallar.
+2. **`busy` con una carrera (media).** Se marcaba tras varias consultas, así que dos mensajes simultáneos pasaban. Ahora se marca y se anota el ritmo antes de cualquier `await`. Confirmar y descartar también marcan el chat como ocupado, para que el aviso de sistema no caiga a mitad de un turno.
+3. **Un token abría un chat con la cuenta de su dueño (media).** `/public/chat` trata como anónima cualquier petición con token.
+4. **Tokens del chat acumulados (media).** Un chat vivo por persona: abrir otro cierra el anterior y revoca su token. Además la conexión se renueva a los 50 minutos, antes de que caduque su token de 60.
+5. **Confirmación que falla (media).** Si falla antes de ejecutar (cupo de tokens, conexión), la propuesta vuelve a abrirse y el token de confirmar se revoca siempre.
+6. **Registro del negocio (baja).** Una herramienta que falla o no existe ya no se asocia a ningún negocio.
+7. **Errores desconocidos del proveedor (baja).** Salen con un mensaje genérico, no el original.
+8. **Interfaz (baja).** Cerrar el panel ya no borra la conversación y Escape solo cierra el chat si el foco está dentro.
+
+**Tope de chats vivos:** 500 por instancia, porque un anónimo elige su propio identificador de chat.
+
+**Aceptado sin cambios:** un anónimo con muchos identificadores y varias IPs puede agotar el tope global diario (2 EUR); lo limitan 20 peticiones por minuto por IP, el tope de chats y el propio tope global, que protege el gasto aunque degrade el servicio. Cerrar el diálogo no devuelve el foco al botón y no es modal (no bloquea el resto de la página a propósito). Dos clics simultáneos en «Confirmar» están cubiertos por dos guardas (estado de la acción y chat ocupado), y los tests no pueden distinguir una de otra.

@@ -582,3 +582,153 @@ describe("AnthropicProvider (cliente simulado)", () => {
     await expect(bad.complete(request, () => undefined)).rejects.toThrow();
   });
 });
+
+describe("revisión cruzada de la Fase 6", () => {
+  const other = "44444444-4444-4444-8444-444444444444";
+  const slowThenSay =
+    (ms: number): Step =>
+    async (_request, onText) => {
+      await new Promise((resolve) => setTimeout(resolve, ms));
+      onText("ok");
+      return { content: [{ type: "text", text: "ok" }], stopReason: "end_turn", usage: USAGE };
+    };
+
+  it("una llamada cortada por el tiempo también cuenta en el gasto", async () => {
+    const slow: Step = (request) =>
+      new Promise((_resolve, reject) =>
+        request.signal?.addEventListener("abort", () => reject(new Error("abortado"))),
+      );
+    await makeApp({ provider: new ScriptedProvider([slow]), turnTimeoutMs: 50 });
+    await chat(SESSION, "hola");
+    const rows = await t.db.select().from(agentEvents).where(eq(agentEvents.type, "error"));
+    expect(rows[0]?.tokensIn).toBeGreaterThan(0);
+  });
+
+  it("dos mensajes a la vez en el mismo chat: solo uno llega al modelo", async () => {
+    const provider = new ScriptedProvider([slowThenSay(150)]);
+    await makeApp({ provider });
+    const [a, b] = await Promise.all([chat(SESSION, "uno"), chat(SESSION, "dos")]);
+    const codes = [a, b].flatMap((r) => ofType(r.events, "error").map((e) => e.code));
+    expect(codes).toEqual(["busy"]);
+    expect(provider.requests).toHaveLength(1);
+  });
+
+  it("un token de acceso no abre el chat con la cuenta de su dueño", async () => {
+    const provider = new ScriptedProvider([say("hola")]);
+    await makeApp({ provider });
+    const created = await post("/me/tokens", customer1.cookies, {
+      label: "x",
+      scopes: ["bookings:read", "bookings:propose"],
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/public/chat",
+      headers: { authorization: `Bearer ${created.json().token}` },
+      payload: { sessionId: SESSION, message: "hola" },
+    });
+    expect(res.statusCode).toBe(200);
+    const names = provider.requests[0]!.tools.map((x) => x.name);
+    expect(names.some((n) => n.startsWith("propose_"))).toBe(false);
+  });
+
+  it("un chat vivo por persona: abrir otro revoca el token del anterior", async () => {
+    await makeApp({ provider: new ScriptedProvider([say("hola")]) });
+    await chat(SESSION, "uno", customer1.cookies);
+    await chat(other, "dos", customer1.cookies);
+    const live = (await t.db.select().from(apiTokens)).filter(
+      (x) => x.label === "Asistente (chat)" && !x.revokedAt,
+    );
+    expect(live).toHaveLength(1);
+  });
+
+  it("tope de chats vivos", async () => {
+    await makeApp({ provider: new ScriptedProvider([say("hola")]), maxSessions: 1 });
+    await chat(SESSION, "uno");
+    const { events } = await chat(other, "dos");
+    expect(events.at(-1)).toMatchObject({ type: "error" });
+  });
+
+  it("dos clics a la vez en «Confirmar»: solo uno ejecuta", async () => {
+    const { proposal } = await proposeWithDemo();
+    const url = `/me/agent/actions/${proposal.actionId}/confirm`;
+    const res = await Promise.all([
+      post(url, customer1.cookies, { sessionId: SESSION }),
+      post(url, customer1.cookies, { sessionId: SESSION }),
+    ]);
+    expect(res.map((r) => r.statusCode).sort()).toEqual([200, 409]);
+  });
+
+  it("si la confirmación falla, la propuesta sigue abierta y no queda token de confirmar", async () => {
+    const { proposal } = await proposeWithDemo();
+    await t.db.update(bookings).set({ status: "expired" });
+    const url = `/me/agent/actions/${proposal.actionId}/confirm`;
+    const first = await post(url, customer1.cookies, { sessionId: SESSION });
+    expect(first.statusCode).toBe(409);
+    const second = await post(url, customer1.cookies, { sessionId: SESSION });
+    expect(second.statusCode).toBe(409);
+    expect(second.json().error.message).not.toContain("ya se ha resuelto");
+    const tokens = await t.db.select().from(apiTokens);
+    expect(tokens.filter((x) => x.scopes.includes("bookings:confirm") && !x.revokedAt)).toEqual([]);
+  });
+
+  it("el tope de gasto por persona corta aunque cambie de chat", async () => {
+    const provider = new ScriptedProvider([say("uno")]);
+    await makeApp({ provider, userDailyBudgetEur: 0.0001 });
+    await chat(SESSION, "primero", customer1.cookies);
+    const next = await chat(other, "segundo", customer1.cookies);
+    expect(next.events[0]).toMatchObject({ code: "budget" });
+    expect(provider.requests).toHaveLength(1);
+  });
+
+  it("iniciar sesión a mitad de chat lo conserva; volver a anónimo no vale", async () => {
+    const provider = new ScriptedProvider([say("hola")]);
+    await makeApp({ provider });
+    await chat(SESSION, "uno");
+    const logged = await chat(SESSION, "dos", customer1.cookies);
+    expect(logged.events.at(-1)).toEqual({ type: "done" });
+    expect(provider.requests[1]!.messages).toHaveLength(3);
+    const anon = await chat(SESSION, "tres");
+    expect(anon.events.at(-1)).toMatchObject({ type: "error" });
+  });
+
+  it("una herramienta inexistente no se asocia a ningún negocio en su registro", async () => {
+    const provider = new ScriptedProvider([
+      useTool("confirm_booking", { businessSlug: SLUG, bookingId: SESSION }),
+      say("ok"),
+    ]);
+    await makeApp({ provider });
+    await chat(SESSION, "hola", customer1.cookies);
+    const rows = await t.db
+      .select()
+      .from(agentEvents)
+      .where(eq(agentEvents.businessId, businessId));
+    expect(rows).toEqual([]);
+  });
+
+  it("un error desconocido del SDK no sale con su mensaje", async () => {
+    const client = {
+      messages: {
+        stream: () => ({
+          on: () => undefined,
+          finalMessage: async () => {
+            throw new Error("401 sk-ant-secreta");
+          },
+        }),
+      },
+    };
+    const provider = new AnthropicProvider({
+      apiKey: "k",
+      model: "m",
+      effort: "low",
+      client: client as never,
+    });
+    const error = await provider
+      .complete(
+        { system: { stable: "a", volatile: "b" }, messages: [], tools: [], maxTokens: 10 },
+        () => undefined,
+      )
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(LlmError);
+    expect((error as Error).message).not.toContain("sk-ant");
+  });
+});
