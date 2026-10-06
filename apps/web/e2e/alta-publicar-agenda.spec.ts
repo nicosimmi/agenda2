@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures.ts";
 
 // Flujo completo del propietario: alta → configurar → publicar → reserva manual en la agenda.
 test("alta, configuración, publicación y reserva manual", async ({ page }) => {

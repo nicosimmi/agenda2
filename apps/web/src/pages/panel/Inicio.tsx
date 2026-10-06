@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { Meteors } from "@/components/ui/meteors";
 import { api } from "../../api.ts";
+import { BlockSkeleton } from "../../components/Skeleton.tsx";
 import { CountUp } from "../../motion.tsx";
 import type { Checklist, Profile } from "../../types.ts";
 import { buttonClass, FormError, Section, useAction } from "../../ui.tsx";
@@ -12,7 +13,9 @@ export function Inicio() {
   const profile = useApi<Profile>("/business/profile");
   const checklist = useApi<Checklist>("/business/checklist");
   const { error, run } = useAction();
-  if (!profile.data || !checklist.data) return <FormError message={profile.error} />;
+  if (!profile.data || !checklist.data) {
+    return profile.error ? <FormError message={profile.error} /> : <BlockSkeleton rows={4} />;
+  }
 
   const published = profile.data.status === "published";
   const done = checklist.data.items.filter((i) => i.ok).length;

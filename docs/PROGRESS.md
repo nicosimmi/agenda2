@@ -1,7 +1,7 @@
 # PROGRESS
 
-**Última actualización:** 2026-10-02 · Claude Code (Sonnet 5.5)
-**Fase actual:** 3 — Panel del negocio (rama `fase-3/panel-negocio`) **Estado:** terminada, a falta de confirmar el merge a `main` y la etiqueta `fase-3`. Siguiente: Fase 4 (buscador y reserva del cliente).
+**Última actualización:** 2026-10-06 · Claude Code (Sonnet 5.5)
+**Fase actual:** 4 — Cliente: búsqueda y reserva (rama `fase-4/cliente-busqueda-reserva`) **Estado:** terminada, a falta de tu confirmación para el merge a `main`. La Fase 3 está integrada y etiquetada (`fase-3`).
 
 ## Hecho
 
@@ -16,7 +16,22 @@
   - Revisión cruzada (subagente sin contexto) hecha: sin hallazgos graves; corregidos 7 de 9, decisiones F2-1 a F2-9.
 - RLS aplazada (F2-5).
 
-## En curso (Fase 3)
+## Hecho en la Fase 4
+
+- API: `GET /public/categories|businesses|businesses/:slug|businesses/:slug/availability`; `POST /me/bookings` (idempotente), `POST /me/bookings/:id/cancel|reschedule`. Buscador con texto completo, trigramas y filtros. Decisiones F4-1 a F4-5. 210 tests en verde.
+- Web: portada con buscador, `/buscar`, ficha `/n/:slug` con reserva en 4 pasos, `/registro`, `/mis-reservas` (cancelar y mover), `/cookies`, `/privacidad`, 404. Modo oscuro con interruptor sol/luna, menú responsive, buscador rápido (`/`), aviso de cookies, subir arriba, esqueletos de carga y preguntas frecuentes en cada página (también en el panel).
+- E2E de Playwright: 6 pruebas (propietario, cookies, tema, subir y FAQ, buscador rápido y el recorrido completo del cliente, que comprueba que el negocio ve la cita). Necesita el seed cargado.
+- Pendiente de la Fase 3 resuelto: categorías desde la API, `useApi` sin carreras.
+
+## Pendiente tras la Fase 4
+
+- El asistente de IA (Fase 6) aparece en la portada como «muy pronto».
+- Textos de la interfaz aún en los componentes, no en un fichero único (F4-4).
+- El E2E no está en el CI (necesita Postgres migrado, el seed y Chromium).
+- Los ajustes de preaviso, horizonte y cancelación del negocio no tienen pantalla en el panel.
+- Verificación de email y recuperación de contraseña (Fase 8).
+
+## Hecho en la Fase 3
 
 - Tanda 1 hecha: perfil (`PATCH`), servicios, profesionales (con `serviceIds`), horarios semanales (con avisos de solape), ausencias, lista de comprobación, publicar/despublicar, agenda con filtro por profesional, reserva manual y cambio de estado. Código en `apps/api/src/panel.ts` y `routes/business.ts`; esquemas en `packages/shared`. 160 tests en verde (`pnpm check`). Decisiones F3-1 a F3-5.
 - Dirección visual decidida (DECISIONS F3-6 a F3-8): paleta crema/dorado/carbón, Kulim Park autoalojada, `motion` solo para la Fase 4. Plugin y MCP de 21st.dev conectados (solo inspiración).

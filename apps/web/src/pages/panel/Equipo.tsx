@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../../api.ts";
+import { BlockSkeleton } from "../../components/Skeleton.tsx";
 import type { Service, Shift, Staff } from "../../types.ts";
 import {
   buttonClass,
@@ -30,6 +31,7 @@ export function Equipo() {
 
   return (
     <>
+      {staff.loading && <BlockSkeleton rows={3} />}
       {staff.data?.map((member) => (
         <Member
           key={member.id}
@@ -248,7 +250,7 @@ function TimeOff({ staff }: { staff: Staff[] }) {
   return (
     <Section title="Ausencias y cierres">
       {data?.length === 0 && <p className="text-muted">No hay ausencias programadas.</p>}
-      <ul className="divide-y divide-stone-200">
+      <ul className="divide-y divide-line">
         {data?.map((a) => (
           <li key={a.id} className="flex flex-wrap items-center gap-3 py-2">
             <span>

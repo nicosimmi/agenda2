@@ -132,6 +132,57 @@ export const bookingStatusSchema = z.object({
   status: z.enum(["cancelled", "completed", "no_show"]),
 });
 
+// --- Búsqueda y reservas del cliente (/public/* y /me/*) ---
+
+/** Parámetro de URL opcional: la cadena vacía cuenta como ausente. */
+const queryText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .transform((v) => v || undefined);
+
+export const searchQuerySchema = z.object({
+  q: queryText(100),
+  city: queryText(100),
+  category: queryText(50),
+  page: z.coerce.number().int().min(1).max(1000).default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).default(12),
+});
+export type SearchQuery = z.infer<typeof searchQuerySchema>;
+
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha no válida (AAAA-MM-DD)");
+const MAX_AVAILABILITY_DAYS = 31;
+
+export const availabilityQuerySchema = z
+  .object({
+    serviceId: z.uuid(),
+    staffId: z.uuid().optional(),
+    from: isoDate,
+    to: isoDate,
+  })
+  .refine(
+    (r) => {
+      const days = (Date.parse(r.to) - Date.parse(r.from)) / 86_400_000;
+      return days >= 0 && days < MAX_AVAILABILITY_DAYS;
+    },
+    { message: `Rango de fechas no válido (máximo ${MAX_AVAILABILITY_DAYS} días)` },
+  );
+
+export const customerBookingSchema = z.object({
+  businessSlug: z.string().min(1).max(100),
+  serviceId: z.uuid(),
+  staffId: z.uuid().optional(), // sin profesional: la API elige uno libre
+  startsAt: z.coerce.date(),
+  notes: optionalText(500).default(null),
+});
+
+export const rescheduleSchema = z.object({
+  startsAt: z.coerce.date(),
+  staffId: z.uuid().optional(),
+});
+
 export type UserRole = "customer" | "business_owner" | "platform_admin";
 
 export interface Me {

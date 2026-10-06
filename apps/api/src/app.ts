@@ -12,6 +12,7 @@ import { adminRoutes } from "./routes/admin.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { businessRoutes } from "./routes/business.ts";
 import { customerRoutes } from "./routes/customer.ts";
+import { publicRoutes } from "./routes/public.ts";
 import { SESSION_COOKIE, findSessionUser, type SessionUser } from "./session.ts";
 import type { TenantContext } from "./tenant.ts";
 
@@ -110,6 +111,7 @@ export async function buildApp(db: Db, config: AppConfig) {
   );
 
   app.get("/health", async () => ({ status: "ok" }));
+  await app.register(publicRoutes, { prefix: "/public" });
   await app.register(authRoutes, { prefix: "/auth" });
   await app.register(customerRoutes, { prefix: "/me" });
   await app.register(businessRoutes, { prefix: "/business" });

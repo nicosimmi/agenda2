@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Modo oscuro por clase (`<html class="dark">`), no por la preferencia del sistema: así el
+   interruptor del usuario manda y `dark:` de los componentes copiados responde a él. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @font-face {
   font-family: "Kulim Park";
   font-weight: 400;
@@ -28,19 +32,53 @@
   unicode-range: U+00A1, U+00BF;
 }
 
-/* Tokens de la dirección visual (DECISIONS F3-6). Un solo sitio para la paleta. */
+/* Paleta (DECISIONS F3-6 y F4-3). Los colores que cambian con el tema son variables; `ink` y
+   `gold` son fijos: `ink` es el carbón de los bloques siempre oscuros y del texto sobre dorado. */
+:root {
+  --page: #faf7f0;
+  --surface: #ffffff;
+  --surface-2: #f3eee2;
+  --fg: #1c1917;
+  --muted: #6b645e;
+  --line: #e3dac6;
+  --gold-text: #8f6a1a; /* dorado para texto y enlaces: 4,9:1 sobre el fondo claro */
+}
+.dark {
+  --page: #14110f;
+  --surface: #1f1b18;
+  --surface-2: #2b2621;
+  --fg: #f3eee3;
+  --muted: #a8a29e;
+  --line: #3b342d;
+  --gold-text: #d9b25f;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-gold-dark: var(--gold-text);
+}
 @theme {
   --font-sans: "Signos", "Kulim Park", ui-sans-serif, system-ui, sans-serif;
-  --color-cream: #faf7f0;
-  --color-card: #ffffff;
   --color-ink: #1c1917;
-  --color-muted: #78716c;
   --color-gold: #c89b3c;
-  --color-gold-dark: #a67c22;
+  --color-gold-hover: #b5862a;
 }
 
 body {
-  @apply bg-cream text-ink font-sans;
+  @apply bg-page text-fg font-sans antialiased;
+}
+
+/* Foco visible para quien navega con teclado. */
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* Animaciones que los componentes de Aceternity esperan en la configuración de Tailwind. */
@@ -49,6 +87,7 @@ body {
     linear infinite;
   --animate-aurora: aurora 60s linear infinite;
   --animate-meteor-effect: meteor 5s linear infinite;
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
 
   @keyframes scroll {
     to {
@@ -80,4 +119,21 @@ body {
       opacity: 0;
     }
   }
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+html {
+  scroll-behavior: smooth;
 }

@@ -2,7 +2,7 @@
 
 Marketplace de reservas donde los negocios con citas (barberías, fisioterapia, pádel, estética…) se dan de alta y los clientes los buscan y reservan, bien con una interfaz clásica o con un **asistente de IA** que actúa mediante un **servidor MCP** propio. Proyecto de portfolio.
 
-> **Estado:** Fase 3 (panel del negocio). Consulta `docs/PROGRESS.md`.
+> **Estado:** Fase 4 (búsqueda y reserva del cliente). Consulta `docs/PROGRESS.md`.
 
 ## Documentación
 
@@ -67,7 +67,7 @@ Para generar una migración nueva tras cambiar `schema.ts`: `pnpm --filter @agen
 pnpm --filter @agendia/api dev   # http://127.0.0.1:3000 (se reinicia al guardar)
 ```
 
-Rutas disponibles por ahora: `GET /health`, `POST /auth/register|login|logout`, `GET /auth/me`, `GET /me/bookings` (cliente), `GET /business/profile` y `GET /business/bookings?from=&to=` (propietario) y `POST /admin/businesses/:id/suspend` (administrador). Los errores siempre tienen la forma `{ "error": { "code", "message" } }`.
+Rutas: `GET /health`; públicas `GET /public/categories|businesses|businesses/:slug|businesses/:slug/availability`; `POST /auth/register|login|logout`, `GET /auth/me`; de cliente `GET|POST /me/bookings` (con `Idempotency-Key`) y `POST /me/bookings/:id/cancel|reschedule`; de propietario `/business/*` (perfil, servicios, equipo, horarios, ausencias, agenda y publicación); y `POST /admin/businesses/:id/suspend`. Los errores siempre tienen la forma `{ "error": { "code", "message" } }`.
 
 La sesión va en una cookie `sid` HttpOnly. Las peticiones que cambian datos desde el navegador tienen que venir de un origen de `WEB_ORIGIN` (protección CSRF). Con `curl` no hace falta cabecera `Origin` mientras no se envíe la cookie.
 
@@ -77,7 +77,7 @@ La sesión va en una cookie `sid` HttpOnly. Las peticiones que cambian datos des
 pnpm --filter @agendia/web dev   # http://localhost:5173 (con la API en marcha)
 ```
 
-La portada está en `/`, el acceso en `/entrar`, el alta de negocio en `/alta` y el panel en `/panel`. En desarrollo Vite reenvía `/api` a la API, así que la cookie de sesión es del mismo origen. Para verla desde el móvil: `pnpm exec vite --host` dentro de `apps/web`, y añade el origen de la IP del PC a `WEB_ORIGIN`.
+La portada está en `/`, la búsqueda en `/buscar`, la ficha de un negocio en `/n/:slug`, el acceso en `/entrar`, el alta de cliente en `/registro`, el alta de negocio en `/alta`, las reservas del cliente en `/mis-reservas` y el panel en `/panel`. El interruptor sol/luna cambia el tema y la tecla `/` abre el buscador rápido. En desarrollo Vite reenvía `/api` a la API, así que la cookie de sesión es del mismo origen. Para verla desde el móvil: `pnpm exec vite --host` dentro de `apps/web`, y añade el origen de la IP del PC a `WEB_ORIGIN`.
 
 Los componentes visuales de `apps/web/src/components/ui` son de [Aceternity UI](https://ui.aceternity.com) (código abierto que se copia al repo, no una dependencia), con los colores adaptados a la paleta. Llevan `@ts-nocheck` y están fuera del lint. La imagen del tablet de la portada es una captura real del panel (`public/img/panel-agenda.png`).
 
@@ -95,7 +95,7 @@ La suite de aislamiento (`apps/api/src/isolation.test.ts`) recorre una tabla con
 
 Los tests de integración usan Postgres real (la base `agendia_test`, que se crea sola), así que hace falta `docker compose up -d` antes de `pnpm test`.
 
-Prueba de extremo a extremo con Playwright (alta, configuración, publicación y reserva manual):
+Pruebas de extremo a extremo con Playwright (alta y publicación de un negocio, y el recorrido de un cliente: buscar, reservar, ver y cancelar). Necesitan Postgres migrado y el seed cargado (`pnpm --filter @agendia/api db:seed`):
 
 ```powershell
 pnpm --filter @agendia/web exec playwright install chromium   # solo la primera vez
