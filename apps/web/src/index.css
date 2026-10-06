@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Kulim Park";
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/kulim-park-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Kulim Park";
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/kulim-park-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Kulim Park";
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/kulim-park-700.woff2") format("woff2");
+}
+
+/* El ¿ y el ¡ de Kulim Park salen deformados (un gancho con el punto desalineado): esos dos signos se
+   toman de una fuente del sistema y el resto del texto sigue en Kulim Park. */
+@font-face {
+  font-family: "Signos";
+  font-weight: 400;
+  src: local("Arial"), local("Helvetica"), local("Liberation Sans"), local("Segoe UI");
+  unicode-range: U+00A1, U+00BF;
+}
+
+/* Tokens de la dirección visual (DECISIONS F3-6). Un solo sitio para la paleta. */
+@theme {
+  --font-sans: "Signos", "Kulim Park", ui-sans-serif, system-ui, sans-serif;
+  --color-cream: #faf7f0;
+  --color-card: #ffffff;
+  --color-ink: #1c1917;
+  --color-muted: #78716c;
+  --color-gold: #c89b3c;
+  --color-gold-dark: #a67c22;
+}
+
+body {
+  @apply bg-cream text-ink font-sans;
+}
+
+/* Animaciones que los componentes de Aceternity esperan en la configuración de Tailwind. */
+@theme {
+  --animate-scroll: scroll var(--animation-duration, 40s) var(--animation-direction, forwards)
+    linear infinite;
+  --animate-aurora: aurora 60s linear infinite;
+  --animate-meteor-effect: meteor 5s linear infinite;
+
+  @keyframes scroll {
+    to {
+      transform: translate(calc(-50% - 0.5rem));
+    }
+  }
+  @keyframes aurora {
+    from {
+      background-position:
+        50% 50%,
+        50% 50%;
+    }
+    to {
+      background-position:
+        350% 50%,
+        350% 50%;
+    }
+  }
+  @keyframes meteor {
+    0% {
+      transform: rotate(215deg) translateX(0);
+      opacity: 1;
+    }
+    70% {
+      opacity: 1;
+    }
+    100% {
+      transform: rotate(215deg) translateX(-500px);
+      opacity: 0;
+    }
+  }
+}

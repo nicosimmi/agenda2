@@ -135,3 +135,63 @@ Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. L
 ## F2-9. Un propietario, un negocio, impuesto por la base de datos
 
 - **Decisión:** `UNIQUE(user_id)` en `business_members` (D6). Sin ella, `tenantForOwner` podría elegir un negocio distinto entre peticiones si un usuario tuviera dos membresías. Si algún día se permite más de un negocio por usuario, se quita la restricción y el negocio activo pasa a guardarse en la sesión.
+
+## F3-1. Servicios de un profesional dentro del propio profesional
+
+- **Decisión:** `serviceIds` viaja en el cuerpo de `POST /business/staff` y `PATCH /business/staff/:id` y se reemplaza entero en una transacción. No hay ruta aparte `PUT /staff/:id/services`. Antes de guardar se comprueba que todos los servicios sean del negocio (400 si no); las claves foráneas compuestas serían la segunda defensa.
+- **Alternativa:** ruta propia por recurso; más rutas y más entradas en la tabla de aislamiento para el mismo efecto.
+
+## F3-2. La reserva manual ignora horario y preaviso
+
+- **Contexto:** el propietario apunta citas por teléfono o de paso, a veces fuera del horario publicado.
+- **Decisión:** `POST /business/bookings` solo exige servicio y profesional activos que se correspondan, y que no se solape con otra reserva activa (la restricción de exclusión devuelve 409 «Ese hueco ya está ocupado»). No consulta horario, ausencias, preaviso ni horizonte. Antes de insertar pasa a `expired` las propuestas caducadas de ese profesional.
+- **Alternativa:** revalidar con `computeAvailability`, como hará la reserva del cliente en la Fase 4. Se descarta aquí porque impediría el caso de uso.
+
+## F3-3. Borrar archiva si hay historial
+
+- **Decisión:** `DELETE` de un servicio o profesional con reservas lo desactiva (`active = false`) y responde `{ archived: true }`; sin reservas lo borra (horarios y asignaciones en cascada). Las reservas tienen clave foránea a ambos y no se pueden dejar huérfanas.
+
+## F3-4. Esquemas de actualización sin valores por defecto
+
+- **Contexto:** en Zod 4, `.partial()` sobre un campo con `default` aplica el valor por defecto cuando falta, así que un `PATCH` reiniciaba `active` o `description`.
+- **Decisión:** en `packages/shared` los esquemas de actualización parten de los campos sin `default`. Un test (`panel.test.ts`) lo fija.
+
+## F3-5. Recortes de alcance de la Fase 3
+
+- **Decisión:** el CRUD de FAQ (SPEC §8) y mover una reserva quedan para cuando los use alguien: la FAQ, el agente (Fase 6); mover, el flujo del cliente (Fase 4). Cancelar y marcar `completed`/`no_show` sí están. El registro del agente también espera a la Fase 6.
+
+## F3-6. Dirección visual: crema, dorado y carbón, con Kulim Park
+
+- **Paleta (elegida por el desarrollador):** `#FAF7F0` fondo · `#FFFFFF` tarjetas y formularios · `#1C1917` texto, títulos y secciones oscuras · `#78716C` texto secundario y bordes · `#C89B3C` acento · `#A67C22` hover y enlaces. Van como variables CSS y tokens de Tailwind en un solo sitio.
+- **Contraste (calculado):** el botón dorado lleva texto `#1C1917` (6,9:1); con texto blanco no llega (2,6:1). `#C89B3C` no se usa como color de texto sobre crema (2,4:1). `#A67C22` solo en títulos grandes y enlaces (3,5:1). `#78716C` sobre crema queda en el límite (4,5:1), así que el texto secundario va mejor sobre blanco.
+- **Fuente:** Kulim Park (Google Fonts, licencia OFL), con los archivos `woff2` en `apps/web/public/fonts` y `@font-face`. Sin dependencia y sin peticiones a Google, que en la UE obligaría a avisar al usuario.
+- **Alcance:** el panel usa paleta y fuente con transiciones sutiles. Las animaciones de scroll (referencias: jeskojets.com y tasteskill.dev) van en la parte pública, en la Fase 4 junto con el buscador. La portada animada no se hace en la Fase 3.
+
+## F3-7. `motion` aprobado para la parte pública
+
+- **Decisión:** el desarrollador aprueba añadir `motion` (la librería de animación de React, antes Framer Motion) para las animaciones de scroll de la Fase 4. No se instala hasta que haya una pantalla que la use; entonces se comprueba la versión vigente. El panel no la necesita.
+- **Alternativa descartada:** CSS e `IntersectionObserver` sin librería (cubren apariciones y parallax ligero, pero no efectos 3D ni de hero por scroll). GSAP: más pesada y con licencia propia.
+
+## F3-8. 21st.dev solo como inspiración
+
+- **Contexto:** la cuenta es gratuita (2 descargas de código al día, sin generación con IA) y sus comandos de instalación exigen shadcn y llevan la API key en la URL.
+- **Decisión:** el plugin y el MCP se usan para ver previews y vídeos como referencia. No se descarga código ni se instala shadcn; los componentes se escriben a mano en el repo.
+
+## F3-9. Portada y panel animados con `motion`
+
+- **Contexto:** al ver el panel en el navegador, el desarrollador lo encontró plano y pidió animaciones de scroll, botones, banners e imágenes, inspiradas en 21st.dev.
+- **Decisión:** se instala `motion` 14.0.0 (aprobada en F3-7) y se adelanta una portada pública en `/` (hero con parallax, cinta de categorías, tarjetas y pasos con aparición al hacer scroll, banner final). El panel gana transiciones entre páginas, subrayado animado en el menú, banner con anillo de progreso y botones con relieve. 21st.dev sigue como inspiración (F3-8): los componentes se escriben a mano, sin shadcn ni descargas. Las imágenes son maquetas hechas con HTML y SVG, sin fotos ni cifras inventadas.
+- **Accesibilidad:** `MotionConfig reducedMotion="user"` desactiva el movimiento si el sistema lo pide.
+- **Consecuencia:** la portada, prevista para la Fase 4, queda hecha; la Fase 4 solo añade buscador y fichas.
+
+## F3-10. Aceternity UI en toda la web (sustituye a F3-8 y amplía F3-6)
+
+- **Contexto:** el desarrollador quiere una web con elementos 3D e interactivos en todas las pantallas, tomando el catálogo completo de Aceternity UI y dejando que Claude elija.
+- **Decisión:** Aceternity publica su catálogo gratis (`ui.aceternity.com/registry.json`, 294 elementos, licencia que permite uso personal y comercial). Cada elemento es un JSON con su código fuente, así que se copia a `apps/web/src/components/ui/` sin plugin, sin CLI de shadcn y sin telemetría. Se descarta el plugin de MCPmarket (hooks en cada sesión, skills sincronizadas desde un servidor remoto y telemetría).
+- **Dependencias aprobadas por el desarrollador:** `clsx`, `tailwind-merge` (la función `cn`), `@tabler/icons-react`, `three`, `@react-three/fiber`, `@react-three/drei` y `@types/three`, con versiones exactas y compatibles con React 19. No se usa el componente `globe` (pide `@react-three/fiber@alpha`); se usa `3d-globe`.
+- **Código copiado:** lleva `// @ts-nocheck` y está fuera del lint, porque no cumple nuestras opciones estrictas de TypeScript. El código propio mantiene el chequeo estricto. Las tres animaciones que esperan los componentes (`scroll`, `aurora`, `meteor`) se definen en `index.css`.
+- **Alcance:** portada, acceso, alta y panel. El panel usa interacción moderada porque se trabaja en él a diario. `prefers-reduced-motion` se respeta con `MotionConfig`.
+- **Revierte:** F3-8 (21st.dev solo inspiración) en lo que se refiere a copiar código, y el límite de movimiento del panel de F3-6. La paleta crema, dorado y carbón y Kulim Park se mantienen.
+- **Componentes usados (17):** navbar redimensionable, banner fijo, rayos de fondo, texto que rota, botón magnético, borde animado, tarjeta 3D, cinta infinita, tablet con scroll, bento, haz que traza el scroll, globo 3D, lámpara, texto con efecto, aurora, barra lateral y meteoros. Se probó `card-spotlight` en el panel y se descartó: su efecto es para fondos oscuros y sobre tarjetas blancas deja una mancha gris.
+- **Adaptaciones al código copiado:** colores a la paleta; `infinite-moving-cards` duplica con React (clonaba nodos del DOM y rompía con StrictMode); `3d-globe` sin el fallback `<Html>` de drei (su desmontaje lanzaba un error de React) y con las texturas de la Tierra autoalojadas en `public/textures` (el original las pedía a unpkg.com); `sidebar` usa `NavLink` de React Router y `aria-label` (con la barra cerrada el texto está oculto y el enlace se quedaba sin nombre accesible).
+- **Peso:** el globo y three.js (≈940 kB, 250 kB comprimidos) van en un trozo aparte que solo se descarga al llegar a esa sección.
