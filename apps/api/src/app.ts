@@ -13,7 +13,9 @@ import { authRoutes } from "./routes/auth.ts";
 import { businessRoutes } from "./routes/business.ts";
 import { customerRoutes } from "./routes/customer.ts";
 import { publicRoutes } from "./routes/public.ts";
+import { tokenRoutes } from "./routes/tokens.ts";
 import { SESSION_COOKIE, findSessionUser, type SessionUser } from "./session.ts";
+import { findTokenUser } from "./tokens.ts";
 import type { TenantContext } from "./tenant.ts";
 
 declare module "fastify" {
@@ -25,6 +27,8 @@ declare module "fastify" {
   }
   interface FastifyRequest {
     user: SessionUser | null;
+    /** Permisos del token con el que se autenticó la petición; null si fue con sesión de navegador. */
+    scopes: string[] | null;
     tenant: TenantContext | null;
   }
 }
@@ -53,6 +57,7 @@ export async function buildApp(db: Db, config: AppConfig) {
   app.decorate("config", config);
   app.decorate("routeList", [] as string[]);
   app.decorateRequest("user", null);
+  app.decorateRequest("scopes", null);
   app.decorateRequest("tenant", null);
 
   app.addHook("onRoute", (route) => {
@@ -74,15 +79,27 @@ export async function buildApp(db: Db, config: AppConfig) {
   });
 
   app.addHook("onRequest", async (req) => {
-    const token = req.cookies[SESSION_COOKIE];
+    const bearer = req.headers.authorization;
+    // Una petición se autentica de una sola forma: con token, la cookie se ignora.
+    const token = bearer === undefined ? req.cookies[SESSION_COOKIE] : undefined;
     // CSRF: una petición de navegador que cambia datos trae Origin. Si viene de otra web, se
     // rechaza; si lleva la cookie de sesión, Origin es obligatorio. Junto con SameSite=Lax,
-    // otra web no puede actuar en nombre del usuario.
+    // otra web no puede actuar en nombre del usuario. Con token no hay cookie que abusar.
     if (!SAFE_METHODS.has(req.method)) {
       const origin = req.headers.origin;
       if (origin ? !config.webOrigins.includes(origin) : token !== undefined) {
         throw new AppError(403, "CSRF", "Origen de la petición no permitido");
       }
+    }
+    if (bearer !== undefined) {
+      // Una cabecera Authorization mal formada o con un token malo es un 401, no "sin sesión":
+      // un cliente MCP con el token caducado tiene que enterarse.
+      const match = /^Bearer (\S+)$/i.exec(bearer);
+      const found = match ? await findTokenUser(db, match[1]!) : null;
+      if (!found) throw new AppError(401, "UNAUTHORIZED", "Token no válido, caducado o revocado");
+      req.user = found.user;
+      req.scopes = found.scopes;
+      return;
     }
     if (token) req.user = await findSessionUser(db, token);
   });
@@ -114,6 +131,7 @@ export async function buildApp(db: Db, config: AppConfig) {
   await app.register(publicRoutes, { prefix: "/public" });
   await app.register(authRoutes, { prefix: "/auth" });
   await app.register(customerRoutes, { prefix: "/me" });
+  await app.register(tokenRoutes, { prefix: "/me/tokens" });
   await app.register(businessRoutes, { prefix: "/business" });
   await app.register(adminRoutes, { prefix: "/admin" });
   return app;

@@ -107,6 +107,8 @@ export interface MyBooking {
   startsAt: string;
   endsAt: string;
   status: "pending" | "confirmed" | "cancelled" | "completed" | "no_show" | "expired";
+  /** Solo en propuestas pendientes: hasta cuándo retienen el hueco. */
+  expiresAt: string | null;
   notes: string | null;
   businessName: string;
   businessSlug: string;

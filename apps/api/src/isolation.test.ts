@@ -79,6 +79,67 @@ const ROUTES: Record<string, RouteSpec> = {
     },
   },
 
+  "GET /me/token": {
+    access: "customer",
+    isolation: async (f) => {
+      expect((await get("/me/token", f.customer1)).user.name).toBe("c1");
+      expect((await get("/me/token", f.customer2)).user.name).toBe("c2");
+    },
+  },
+  "GET /me/tokens": {
+    access: "customer",
+    isolation: async (f) => {
+      await send("POST", "/me/tokens", f.customer1, { label: "uno", scopes: ["bookings:read"] });
+      expect(await get("/me/tokens", f.customer1)).toHaveLength(1);
+      expect(await get("/me/tokens", f.customer2)).toHaveLength(0);
+    },
+  },
+  "POST /me/tokens": {
+    access: "customer",
+    isolation: async (f) => {
+      // Un userId en el cuerpo se ignora: el token es de quien tiene la sesión.
+      const res = await send("POST", "/me/tokens", f.customer1, {
+        label: "x",
+        scopes: ["bookings:read"],
+        userId: "00000000-0000-4000-8000-000000000000",
+      });
+      expect(res.statusCode).toBe(201);
+      expect(await get("/me/tokens", f.customer1)).toHaveLength(1);
+      expect(await get("/me/tokens", f.customer2)).toHaveLength(0);
+    },
+  },
+  "DELETE /me/tokens/:id": {
+    access: "customer",
+    sample: () => "/me/tokens/00000000-0000-4000-8000-000000000000",
+    isolation: async (f) => {
+      const created = (
+        await send("POST", "/me/tokens", f.customer1, { label: "x", scopes: ["bookings:read"] })
+      ).json();
+      expect((await send("DELETE", `/me/tokens/${created.id}`, f.customer2)).statusCode).toBe(404);
+      expect((await send("DELETE", `/me/tokens/${created.id}`, f.customer1)).statusCode).toBe(204);
+    },
+  },
+  "POST /me/bookings/propose": {
+    access: "customer",
+    isolation: async (f) => {
+      const res = await send("POST", "/me/bookings/propose", f.customer1, {
+        businessSlug: "negocio-b",
+        serviceId: f.serviceB,
+        startsAt: "2030-01-10T11:00:00Z",
+      });
+      expect(res.statusCode).toBe(409);
+      expect(await get("/me/bookings", f.customer2)).toHaveLength(1);
+    },
+  },
+  "POST /me/bookings/:id/confirm": {
+    access: "customer",
+    sample: (f) => `/me/bookings/${f.bookingB}/confirm`,
+    isolation: async (f) => {
+      // bookingB es de customer2: customer1 no la ve (404).
+      const res = await send("POST", `/me/bookings/${f.bookingB}/confirm`, f.customer1);
+      expect(res.statusCode).toBe(404);
+    },
+  },
   "POST /me/bookings": {
     access: "customer",
     isolation: async (f) => {

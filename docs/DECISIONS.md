@@ -226,3 +226,51 @@ Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. L
 
 - **Decisión:** `cliente.spec.ts` usa los negocios de demostración (Barbería El Califa). Antes de la primera ejecución hace falta `pnpm --filter @agendia/api db:seed`. El E2E del propietario crea su propio negocio y no lo necesita.
 - **Carrera corregida:** `useApi` descarta las respuestas antiguas; sin eso, al cambiar de día en la agenda la respuesta lenta del día anterior podía pisar la nueva.
+
+## F5-1. Tokens de acceso con permisos (autorización del servidor MCP)
+
+- **Decisión:** los clientes MCP y el agente se autentican con un token `agt_…` (32 bytes aleatorios; en la base de datos solo el hash SHA-256, como las sesiones). Lleva permisos (`bookings:read`, `bookings:propose`, `bookings:confirm`), caduca (1 hora por defecto, máximo 24) y se puede revocar. Máximo 10 activos por persona.
+- **Un token no se amplía a sí mismo:** crear, listar y revocar tokens exige una sesión de navegador; con un token es un 403. Solo valen para cuentas de cliente, y se comprueba el rol en cada uso.
+- **Una petición se autentica de una sola forma:** si trae `Authorization`, la cookie se ignora, y un token malo es un 401 (no «sin sesión»), para que un cliente con el token caducado se entere.
+- **Propuesta y confirmación son permisos distintos:** reservar, cancelar o mover directamente también exigen `bookings:confirm`. Así a la conexión del modelo (leer + proponer) le es imposible reservar, aunque lo intente por otra ruta. Es la regla de oro de AGENTS.md aplicada en la API, no solo en el prompt.
+- **Alternativa descartada:** JWT con permisos dentro. No se puede revocar sin una tabla, que es lo mismo que ya tenemos.
+
+## F5-2. Propuestas que retienen el hueco
+
+- **Decisión:** `POST /me/bookings/propose` crea una reserva `pending` con `expires_at` a 10 minutos (origen `agent`) y devuelve el resumen para la tarjeta de confirmación. Mientras dura, el hueco no se ofrece a nadie (el motor de disponibilidad ya cuenta las pendientes sin caducar). `POST /me/bookings/:id/confirm` la pasa a `confirmed` solo si es propia, sigue `pending` y no ha caducado; es una sola sentencia `UPDATE … WHERE`, sin carrera con la caducidad. Repetir la confirmación no cambia nada.
+- **Límites:** 3 propuestas pendientes por persona (para que nadie acapare huecos) y 60 propuestas por hora.
+- **Caducadas:** `GET /me/bookings` las devuelve ya como `expired` aunque la fila no se haya limpiado.
+- **Cancelar y mover:** `propose_cancellation` y `propose_reschedule` son comprobaciones sin efectos (política de plazos y hueco libre); lo definitivo es `confirm_*`, que vuelve a validar en la API.
+
+## F5-3. El servidor MCP es un cliente delgado de la API
+
+- **Decisión:** `apps/mcp-server` no toca la base de datos ni repite reglas: cada herramienta llama a la API con el token de la conexión. Aislamiento, permisos, disponibilidad y plazos son los de la API.
+- **Herramientas según permisos (mínimo privilegio):** sin token, 6 de lectura pública; `read` añade `list_my_bookings`; `propose` añade `propose_booking` (y las comprobaciones de cancelar o mover con `read`); `confirm` añade las tres `confirm_*`. La lista se calcula al conectar preguntando a `GET /me/token`. Una herramienta que no se ofrece no se puede llamar.
+- **Anotaciones MCP:** las de lectura son `readOnlyHint`; `confirm_cancellation` y `confirm_reschedule`, `destructiveHint`; `confirm_booking` y `confirm_cancellation`, idempotentes.
+- **Errores pensados para el modelo:** un hueco ocupado devuelve alternativas cercanas; un 401 pide generar otro token; una propuesta caducada lo dice.
+- **Transportes:** stdio (Claude Desktop, inspector de MCP) y Streamable HTTP **sin estado** (cada petición lleva su token y recibe su propio servidor). El HTTP escucha en `127.0.0.1`, rechaza orígenes de navegador no permitidos (DNS rebinding), limita el cuerpo a 256 kB y devuelve 405 a GET.
+- **SDK:** `@modelcontextprotocol/sdk` 1.32.1 (la vigente al consultar su paquete). Se usa `McpServer.registerTool` con esquemas Zod. Sus tipos no cumplen `exactOptionalPropertyTypes`, así que ese paquete lo desactiva.
+
+## F5-4. Contenido de terceros y inyección indirecta
+
+- **Decisión:** las descripciones y preguntas frecuentes de los negocios llegan al modelo dentro de `<dato_no_confiable fuente="…">…</dato_no_confiable>`, con tope de longitud, sin caracteres de control y sin `<` ni `>` (no pueden cerrar la marca ni abrir otra). Los nombres se limpian igual. Las instrucciones del servidor y las descripciones de las herramientas dicen que ese texto es información y nunca instrucciones.
+- **Defensa de fondo:** ninguna herramienta de las que tiene el modelo puede confirmar. Aunque un negocio convenciera al modelo, `confirm_*` no existe en su conexión. Hay un test que lo intenta.
+- **Limitación conocida (SPEC §9):** un cliente MCP genérico con un token de «acceso completo» ve también `confirm_*`. Es coherente (actúa como esa persona), por eso la web avisa y el token caduca.
+
+## F5-5. Pantalla de tokens en «Mis reservas»
+
+- **Decisión:** añadida para poder conectar un cliente real sin tocar la base de datos: tres presets (asistente, solo lectura, completo), caducidad elegible, el secreto se muestra una sola vez con un fragmento de configuración para Claude Desktop, y lista de tokens activos con su último uso y botón de revocar. No estaba en el SPEC; es pequeña y es la forma de usar la fase.
+
+## F5-6. Revisión cruzada de la Fase 5 (subagente sin contexto, Opus)
+
+No encontró escalada de permisos ni forma de que un token de leer y proponer reserve, confirme, cancele o mueva. Siete hallazgos, todos verificados en el código y corregidos con un test que los reproduce:
+
+1. **Límite de 3 propuestas saltable con concurrencia (media).** El recuento y el insert no estaban serializados. Ahora un cerrojo de transacción por persona (`pg_advisory_xact_lock`, el mismo patrón que la idempotencia) y lo mismo en el tope de 10 tokens. Una prueba paralela no reproducía la carrera de forma fiable, así que el test retiene el cerrojo desde otra conexión y comprueba que la propuesta espera (y que la de otra persona no); se comprobó que falla si se cambia la clave del cerrojo.
+2. **Texto de terceros sin marcar (media).** `city`, `contactPhone` y `contactEmail` llegaban al modelo tal cual. Ahora pasan por `plain()`, y el email de contacto se valida como email al guardarlo.
+3. **Propuestas sin sitio donde confirmarlas (media, producto).** El preset de asistente crea propuestas que la persona no podía confirmar hasta la Fase 6. Mis reservas muestra un botón «Confirmar» en las pendientes, con el plazo de retención.
+4. **La agenda del negocio veía las propuestas caducadas como `pending` (media-baja).** Ahora salen como `expired` y el negocio no puede marcarlas completadas ni «no se presentó».
+5. **Confirmar sin revalidar (baja).** La confirmación exige ahora que la cita no haya empezado y que el negocio siga publicado.
+6. **Caracteres invisibles (baja).** Se eliminan los de formato (etiquetas TAG, bidi, ancho cero) y se normaliza con NFKC, de modo que los `<` y `>` de ancho completo no sobreviven.
+7. **Menores:** `businessSlug` codificado también en `alternatives()`, `source` real de la propuesta (`agent` con token, `web` con sesión), `deleteOldTokens` ahora se usa al crear un token, y el test con el título equivocado se corrigió.
+
+**Aceptado sin cambios:** `/auth/me` responde a cualquier token (devuelve el email de la propia cuenta) y el servidor HTTP del MCP no valida `Host`, solo `Origin`: el token lo aporta el cliente y no es ambiental, así que no hay ataque de DNS rebinding útil.

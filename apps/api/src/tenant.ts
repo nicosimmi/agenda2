@@ -57,7 +57,10 @@ export async function listBusinessBookings(
       code: bookings.code,
       startsAt: bookings.startsAt,
       endsAt: bookings.endsAt,
-      status: bookings.status,
+      // Una propuesta cuyo plazo ha pasado ya no retiene el hueco: se enseña como caducada.
+      status: sql<
+        typeof bookings.$inferSelect.status
+      >`case when ${bookings.status} = 'pending' and ${bookings.expiresAt} <= now() then 'expired' else ${bookings.status} end`,
       source: bookings.source,
       staffId: bookings.staffId,
       serviceName: services.name,

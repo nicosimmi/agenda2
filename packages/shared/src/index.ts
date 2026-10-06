@@ -57,7 +57,13 @@ export const businessProfileUpdateSchema = z
     province: optionalText(100),
     postalCode: optionalText(10),
     contactPhone: optionalText(30),
-    contactEmail: optionalText(254),
+    // Vacío borra el valor; si no, tiene que ser un email: el texto llega a clientes y al modelo (MCP).
+    contactEmail: z
+      .string()
+      .trim()
+      .max(254)
+      .refine((v) => v === "" || z.email().safeParse(v).success, "Email de contacto no válido")
+      .transform((v) => v || null),
     minNoticeMin: z
       .int()
       .min(0)
@@ -182,6 +188,30 @@ export const rescheduleSchema = z.object({
   startsAt: z.coerce.date(),
   staffId: z.uuid().optional(),
 });
+
+// --- Tokens de acceso para clientes MCP y agentes (SPEC §9) ---
+
+/**
+ * Permisos de un token. Separar `propose` de `confirm` es lo que impide que un modelo reserve
+ * por su cuenta: a la conexión del modelo solo se le da `read` y `propose`.
+ */
+export const TOKEN_SCOPES = ["bookings:read", "bookings:propose", "bookings:confirm"] as const;
+export type TokenScope = (typeof TOKEN_SCOPES)[number];
+
+/** Una propuesta de reserva retiene el hueco este tiempo; si no se confirma, caduca. */
+export const PROPOSAL_TTL_MINUTES = 10;
+
+export const tokenCreateSchema = z.object({
+  label: z.string().trim().min(1).max(60),
+  scopes: z
+    .array(z.enum(TOKEN_SCOPES))
+    .min(1)
+    .max(TOKEN_SCOPES.length)
+    .transform((scopes) => [...new Set(scopes)]),
+  // Corta por defecto: un token filtrado deja de valer pronto.
+  ttlMinutes: z.int().min(5).max(1440).default(60),
+});
+export type TokenCreateInput = z.infer<typeof tokenCreateSchema>;
 
 export type UserRole = "customer" | "business_owner" | "platform_admin";
 

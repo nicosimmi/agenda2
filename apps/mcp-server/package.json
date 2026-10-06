@@ -1,0 +1,25 @@
+{
+  "name": "@agendia/mcp-server",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Servidor MCP de AgendIA: herramientas de lectura y propose_*/confirm_* sobre la API",
+  "bin": {
+    "agendia-mcp": "src/stdio.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "start:stdio": "node --env-file=../../.env src/stdio.ts",
+    "start:http": "node --env-file=../../.env src/http.ts"
+  },
+  "dependencies": {
+    "@agendia/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@agendia/core": "workspace:*",
+    "@types/node": "24.19.0",
+    "drizzle-orm": "0.45.3"
+  }
+}

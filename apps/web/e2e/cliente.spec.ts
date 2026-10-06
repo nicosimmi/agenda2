@@ -139,3 +139,86 @@ test("cliente: busca, reserva creando su cuenta, cancela, y el negocio la ve", a
   await page.getByRole("tab", { name: /Pasadas y canceladas/ }).click();
   await expect(page.getByRole("listitem").filter({ hasText: code })).toContainText("Cancelada");
 });
+
+test("token para un asistente: se crea en la web, propone pero no confirma, y se revoca", async ({
+  page,
+}) => {
+  const email = `token-${Date.now()}@demo.agendia.test`;
+  await page.goto("/registro");
+  await page.getByLabel("Tu nombre").fill("Tomás Token");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel(/Contraseña/).fill("clave-segura-123");
+  await page.getByRole("button", { name: "Crear cuenta" }).click();
+  await expect(page.getByRole("heading", { name: "Mis reservas" })).toBeVisible();
+
+  // Crear un token del tipo «asistente» (leer y proponer)
+  await page.getByRole("button", { name: "Crear token" }).click();
+  const token = (await page.getByTestId("new-token").textContent())!.trim();
+  expect(token).toMatch(/^agt_/);
+  const auth = { authorization: `Bearer ${token}` };
+
+  // Un hueco libre de un negocio de demostración
+  const detail = await (await page.request.get("/api/public/businesses/barberia-el-califa")).json();
+  const service = detail.services.find((s: { name: string }) => s.name === "Corte de pelo");
+  const from = madridDay(new Date(Date.now() + 2 * 86_400_000).toISOString());
+  const to = madridDay(new Date(Date.now() + 9 * 86_400_000).toISOString());
+  const slots = (
+    await (
+      await page.request.get(
+        `/api/public/businesses/barberia-el-califa/availability?serviceId=${service.id}&from=${from}&to=${to}`,
+      )
+    ).json()
+  ).slots as { staffId: string; startsAt: string }[];
+  const slot = slots[0]!;
+  const body = {
+    businessSlug: "barberia-el-califa",
+    serviceId: service.id,
+    staffId: slot.staffId,
+    startsAt: slot.startsAt,
+  };
+
+  // Con ese token se puede proponer, pero no confirmar ni reservar directamente ni crear más tokens
+  const proposed = await page.request.post("/api/me/bookings/propose", {
+    headers: auth,
+    data: body,
+  });
+  expect(proposed.status()).toBe(201);
+  const { id } = await proposed.json();
+  expect(
+    (await page.request.post(`/api/me/bookings/${id}/confirm`, { headers: auth })).status(),
+  ).toBe(403);
+  expect(
+    (
+      await page.request.post("/api/me/bookings", {
+        headers: { ...auth, "idempotency-key": "k" },
+        data: body,
+      })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await page.request.post("/api/me/tokens", {
+        headers: auth,
+        data: { label: "x", scopes: ["bookings:read"] },
+      })
+    ).status(),
+  ).toBe(403);
+
+  // La propuesta aparece como pendiente en Mis reservas: la confirma la persona con un clic
+  await page.reload();
+  const pending = page.getByRole("listitem").filter({ hasText: "Pendiente" });
+  await expect(pending).toContainText("Corte de pelo");
+  await pending.getByRole("button", { name: "Confirmar" }).click();
+  const confirmed = page.getByRole("listitem").filter({ hasText: "Confirmada" });
+  await expect(confirmed).toContainText("Corte de pelo");
+
+  // Y la puede cancelar
+  await confirmed.getByRole("button", { name: "Cancelar" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Sí, cancelar" }).click();
+
+  // Revocar el token lo deja sin acceso al momento
+  await page.getByRole("button", { name: "Revocar" }).click();
+  await expect
+    .poll(async () => (await page.request.get("/api/me/bookings", { headers: auth })).status())
+    .toBe(401);
+});

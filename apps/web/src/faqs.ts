@@ -108,6 +108,14 @@ export const FAQ: Record<string, FaqItem[]> = {
       a: "Sí, con Mover. Verás los huecos libres y la reserva anterior queda libre para otras personas.",
     },
     {
+      q: "¿Qué es un token de acceso?",
+      a: "Una clave temporal para que un asistente de IA compatible con MCP busque y proponga reservas en tu nombre. Tú eliges qué puede hacer, caduca solo y puedes revocarlo cuando quieras. Un token nunca puede crear otros tokens.",
+    },
+    {
+      q: "¿Puede un asistente reservar sin que yo lo sepa?",
+      a: "Con el permiso para asistentes solo propone: la cita queda retenida 10 minutos y no es una reserva hasta que tú la confirmas. Si le das acceso completo, sí puede confirmar, así que úsalo solo con herramientas de tu confianza.",
+    },
+    {
       q: "¿Qué significa cada estado?",
       a: "Confirmada: tu hueco está reservado. Cancelada: la anulaste tú o el negocio. Completada: ya fuiste. No se presentó: el negocio marcó que no acudiste.",
     },
