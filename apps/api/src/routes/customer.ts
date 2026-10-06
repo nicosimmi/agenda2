@@ -35,6 +35,7 @@ export async function customerRoutes(app: FastifyInstance) {
         businessName: businesses.name,
         businessSlug: businesses.slug,
         businessCity: businesses.city,
+        businessTimezone: businesses.timezone,
         cancelLimitHours: businesses.cancelLimitHours,
         serviceId: bookings.serviceId,
         serviceName: services.name,

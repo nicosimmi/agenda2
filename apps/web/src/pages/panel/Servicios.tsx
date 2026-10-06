@@ -39,7 +39,7 @@ export function Servicios() {
     <>
       <Section title="Servicios">
         {data?.length === 0 && <p className="text-muted">Aún no tienes servicios.</p>}
-        <ul className="divide-y divide-stone-200">
+        <ul className="divide-y divide-line">
           {data?.map((s) => (
             <li key={s.id} className="flex flex-wrap items-center gap-3 py-2">
               <span className={s.active ? "" : "text-muted line-through"}>

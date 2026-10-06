@@ -36,7 +36,7 @@ export function GlobeSection() {
           </p>
           <Link
             to="/alta"
-            className="bg-gold text-ink hover:bg-gold-dark mt-8 inline-block rounded-md px-6 py-3 font-bold transition-colors"
+            className="bg-gold text-ink hover:bg-gold-hover mt-8 inline-block rounded-md px-6 py-3 font-bold transition-colors"
           >
             Quiero mi agenda
           </Link>

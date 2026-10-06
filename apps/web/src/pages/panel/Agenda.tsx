@@ -92,7 +92,7 @@ export function Agenda() {
           </label>
         </div>
         {bookings.data?.length === 0 && <p className="text-muted">No hay reservas este día.</p>}
-        <ul className="divide-y divide-stone-200">
+        <ul className="divide-y divide-line">
           {bookings.data?.map((b) => (
             <li key={b.id} className="flex flex-wrap items-center gap-3 py-2">
               <span>

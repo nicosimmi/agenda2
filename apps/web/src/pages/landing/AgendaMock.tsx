@@ -24,7 +24,7 @@ export function AgendaMock() {
 
   return (
     <div className="relative mx-auto w-full max-w-md">
-      <div className="rounded-2xl bg-white p-6 shadow-2xl shadow-amber-900/15">
+      <div className="rounded-2xl bg-surface p-6 shadow-2xl shadow-amber-900/15">
         <div className="flex items-center justify-between">
           <strong className="text-lg">Hoy · Agenda</strong>
           <span className="bg-gold/25 text-gold-dark flex gap-1 rounded-full px-3 py-1 text-xs font-bold">
@@ -50,7 +50,7 @@ export function AgendaMock() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 + i * 0.15, duration: 0.5 }}
               className={`flex items-center gap-4 rounded-lg px-4 py-3 ${
-                i % 2 === 0 ? "bg-gold/25" : "bg-stone-100"
+                i % 2 === 0 ? "bg-gold/25" : "bg-surface-2"
               }`}
             >
               <span className="font-bold">{time}</span>

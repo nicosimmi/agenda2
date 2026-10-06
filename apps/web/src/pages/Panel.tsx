@@ -10,6 +10,18 @@ import { AnimatePresence, motion } from "motion/react";
 import { Link, Navigate, useLocation, useOutlet } from "react-router-dom";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { useAuth } from "../auth.tsx";
+import { Faq } from "../components/Faq.tsx";
+import { PageLoader } from "../components/Skeleton.tsx";
+import { ThemeToggle } from "../components/ThemeToggle.tsx";
+import { FAQ } from "../faqs.ts";
+
+const PANEL_FAQ: Record<string, string> = {
+  "/panel": "panelInicio",
+  "/panel/perfil": "panelPerfil",
+  "/panel/servicios": "panelServicios",
+  "/panel/equipo": "panelEquipo",
+  "/panel/agenda": "panelAgenda",
+};
 
 const ICON = "size-5 shrink-0";
 const LINKS = [
@@ -25,12 +37,14 @@ export function Panel() {
   const { pathname } = useLocation();
   // useOutlet congela la ruta que sale mientras dura su animación de salida.
   const outlet = useOutlet();
-  if (me === undefined) return null;
-  if (!me) return <Navigate to="/entrar" replace />;
+  if (me === undefined) return <PageLoader />;
+  if (!me) return <Navigate to="/entrar?volver=/panel" replace />;
+  // Un cliente no tiene panel: su zona es Mis reservas.
+  if (me.role !== "business_owner") return <Navigate to="/mis-reservas" replace />;
   return (
-    <div className="flex h-screen flex-col md:flex-row">
+    <div className="flex min-h-screen flex-col md:flex-row">
       <Sidebar>
-        <SidebarBody className="bg-ink justify-between gap-8 text-stone-300">
+        <SidebarBody className="bg-ink justify-between gap-8 text-stone-300 md:sticky md:top-0 md:h-screen">
           <div className="flex flex-1 flex-col overflow-hidden">
             <Link to="/" className="text-gold mb-8 px-1 text-xl font-bold whitespace-nowrap">
               A<span className="text-white">gendIA</span>
@@ -44,15 +58,18 @@ export function Panel() {
           <button
             onClick={logout}
             aria-label={`Salir (${me.name})`}
-            className="hover:text-gold flex items-center gap-2 px-1 text-left text-sm whitespace-nowrap transition-colors"
+            className="hover:text-gold flex cursor-pointer items-center gap-2 px-1 text-left text-sm whitespace-nowrap transition-colors"
           >
             <IconLogout className={ICON} />
             <span className="truncate">Salir · {me.name}</span>
           </button>
         </SidebarBody>
       </Sidebar>
-      <main className="flex-1 overflow-y-auto p-4 sm:p-8">
+      <main id="contenido" className="min-w-0 flex-1 p-4 sm:p-8">
         <div className="mx-auto max-w-4xl">
+          <div className="mb-4 flex justify-end">
+            <ThemeToggle />
+          </div>
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
@@ -63,6 +80,7 @@ export function Panel() {
               className="space-y-6"
             >
               {outlet}
+              {PANEL_FAQ[pathname] && <Faq items={FAQ[PANEL_FAQ[pathname]!]!} className="pt-6" />}
             </motion.div>
           </AnimatePresence>
         </div>

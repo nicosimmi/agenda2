@@ -9,7 +9,7 @@ import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 
-const box = "bg-cream border-ink/5 flex size-full min-h-24 rounded-lg border p-3";
+const box = "bg-page border-line flex size-full min-h-24 rounded-lg border p-3";
 
 const SLOTS = [
   ["09:00", false],
@@ -42,7 +42,7 @@ function Slots() {
           <div
             key={time}
             className={`relative rounded-md py-1.5 text-center text-sm font-semibold ${
-              busy ? "text-muted bg-transparent line-through" : "bg-white"
+              busy ? "text-muted bg-transparent line-through" : "bg-surface"
             }`}
           >
             {i === selected && (
@@ -85,7 +85,7 @@ function Chat() {
         whileInView={{ opacity: 1, x: 0 }}
         viewport={{ once: true }}
         transition={{ delay: 0.4 }}
-        className="rounded-xl rounded-bl-sm bg-white px-3 py-2"
+        className="rounded-xl rounded-bl-sm bg-surface px-3 py-2"
       >
         Hay hueco a las 17:30. ¿Lo reservo?
       </motion.div>
@@ -192,7 +192,7 @@ export function Features() {
         <BentoGridItem
           key={item.title}
           {...item}
-          className={`border-ink/5 bg-white ${item.className ?? ""}`}
+          className={`border-line bg-surface ${item.className ?? ""}`}
         />
       ))}
     </BentoGrid>
