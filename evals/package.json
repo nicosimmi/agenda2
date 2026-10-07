@@ -1,0 +1,10 @@
+{
+  "name": "@agendia/evals",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "eval": "node --env-file-if-exists=../.env run.ts"
+  }
+}
