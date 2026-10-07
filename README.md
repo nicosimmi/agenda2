@@ -151,7 +151,7 @@ Resultado actual ([`evals/REPORT.md`](evals/REPORT.md)), con un modelo **simulad
 
 | Comprobaciones          | Aciertos                         |
 | ----------------------- | -------------------------------- |
-| Sistema (guardarraíles) | **228/228**                      |
+| Sistema (guardarraíles) | **330/330**                      |
 | Modelo (conducta)       | 93/178, esperado con este modelo |
 
 Aunque el modelo se deje manipular en todo, no confirma nada, no cambia nada sin el clic y no ve datos ajenos. **La tasa de acierto con un modelo real no está medida**: el proyecto se ha hecho sin gastar en la API. Fallos conocidos y límites:
