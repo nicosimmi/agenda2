@@ -172,6 +172,36 @@ automation/  evals/  docs/
 
 Documentadas en [`.env.example`](.env.example). Los secretos (por ejemplo `ANTHROPIC_API_KEY`) van solo en `.env`, que Git ignora.
 
-## Importar los workflows de n8n
+## Automatizaciones (emails con n8n)
 
-Pendiente (Fase 7).
+Cuando una reserva se crea, se cancela o se mueve, la API anota un evento en la tabla `outbox_events`, dentro de la misma transacción. Un proceso de la propia API lo entrega a n8n con una petición firmada (HMAC-SHA256) y, si n8n no responde, lo reintenta con espera creciente. Cuatro workflows de [`automation/`](automation) mandan los correos, que en desarrollo caen en Mailpit:
+
+| Workflow            | Cuándo                                           | Quién recibe                              |
+| ------------------- | ------------------------------------------------ | ----------------------------------------- |
+| `reserva-creada`    | Reserva nueva o propuesta confirmada             | Cliente y negocio                         |
+| `reserva-movida`    | El cliente cambia la hora                        | Cliente y negocio                         |
+| `reserva-cancelada` | Cancela el cliente o el negocio                  | Cliente (y negocio si cancela el cliente) |
+| `recordatorio-24h`  | Cada 15 minutos busca citas en las próximas 24 h | Cliente                                   |
+
+Para configurarlo, una sola vez, pon en `.env` `AUTOMATION_SECRET` con un valor largo (`node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`) y `N8N_WEBHOOK_BASE=http://localhost:5678/webhook`. Sin `N8N_WEBHOOK_BASE`, la API no entrega nada y los eventos esperan en la tabla.
+
+Los workflows se importan en n8n así (PowerShell, desde la raíz del repositorio):
+
+```powershell
+docker compose up -d
+docker compose exec -u root n8n rm -rf /tmp/automation
+docker compose cp automation n8n:/tmp/automation
+docker compose exec -u root n8n chmod -R a+rX /tmp/automation
+docker compose exec n8n n8n import:credentials --input=/tmp/automation/credentials/mailpit.json
+docker compose exec n8n sh -c 'for f in /tmp/automation/*.json; do n8n import:workflow --input=$f; done'
+docker compose exec n8n sh -c 'for id in agendia-reserva-creada agendia-reserva-cancelada agendia-reserva-movida agendia-recordatorio-24h; do n8n publish:workflow --id=$id; done'
+docker compose restart n8n
+```
+
+Para probarlo, arranca la API (`pnpm --filter @agendia/api dev`), reserva como cliente y abre http://localhost:8025: llegan dos correos, uno al cliente y otro al negocio. Para el recordatorio no hace falta esperar: con una cita confirmada que empiece dentro de 24 h y se haya reservado con más de 24 h de antelación, lánzalo a mano (los dos puertos extra evitan chocar con el n8n que ya está en marcha):
+
+```powershell
+docker compose exec -e N8N_RUNNERS_BROKER_PORT=5680 -e N8N_PORT=5681 n8n n8n execute --id=agendia-recordatorio-24h
+```
+
+Los correos son texto plano a propósito: nada de lo que escribe un cliente se interpreta como HTML. Si cambias un workflow en la interfaz de n8n, expórtalo con `n8n export:workflow` y sustituye el fichero de `automation/`. Los eventos que fallan 8 veces seguidas se quedan en `outbox_events` sin entregar, para revisarlos a mano.

@@ -334,3 +334,38 @@ No encontró ningún camino para que el modelo confirme sin el clic. Hallazgos c
 **Tope de chats vivos:** 500 por instancia, porque un anónimo elige su propio identificador de chat.
 
 **Aceptado sin cambios:** un anónimo con muchos identificadores y varias IPs puede agotar el tope global diario (2 EUR); lo limitan 20 peticiones por minuto por IP, el tope de chats y el propio tope global, que protege el gasto aunque degrade el servicio. Cerrar el diálogo no devuelve el foco al botón y no es modal (no bloquea el resto de la página a propósito). Dos clics simultáneos en «Confirmar» están cubiertos por dos guardas (estado de la acción y chat ocupado), y los tests no pueden distinguir una de otra.
+
+## F7-1. Outbox y entrega a n8n
+
+- El evento (`booking.created`, `booking.rescheduled`, `booking.cancelled`) se escribe en `outbox_events` dentro de la transacción de la reserva, ya con los datos del email (negocio, cliente, servicio, hora en la zona del negocio). n8n no consulta la API para redactar.
+- Lo entrega un temporizador dentro del proceso de la API (cada 5 s, solo en `server.ts`; los tests no lo arrancan). Un webhook por tipo: `/webhook/agendia-booking-created`, etc.
+- Entrega **al menos una vez**: el cuerpo lleva el `id` del evento. Si n8n falla o no responde en 5 s, se reintenta con espera `30 · 2^n` segundos (máximo 1 h). A los 8 intentos se abandona y el evento queda en la tabla para revisarlo a mano.
+- `FOR UPDATE SKIP LOCKED`: con varias instancias de la API no se envía el mismo evento a la vez.
+- Migración `0005`: `outbox_events.next_attempt_at` y `bookings.reminder_sent_at`.
+- Sin `N8N_WEBHOOK_BASE` no se entrega nada y los eventos se acumulan.
+
+## F7-2. Firma HMAC en los dos sentidos
+
+`x-agendia-timestamp` (segundos) y `x-agendia-signature: sha256=<hex>`, calculada sobre `marca.datos`. En los webhooks los datos son el cuerpo; en las llamadas de n8n a la API, `MÉTODO ruta
+` (así una firma de un GET no vale para un POST). Se rechazan marcas de más de 5 minutos y la comparación es de tiempo constante. n8n verifica con `JSON.stringify` del cuerpo ya interpretado, que coincide byte a byte con lo que envía la API (sin números decimales ni escapes raros); si algún día falla, hay que pasar a leer el cuerpo en bruto.
+
+## F7-3. Excepción acotada a «todo pasa por el tenant»
+
+El despachador del outbox y `GET /internal/reminders` recorren **todos los negocios** a la vez: son tareas del sistema, no de una sesión. No hay forma de hacerlas por tenant sin una pasada por negocio, y SPEC §12 las pide así. Límites: no aceptan ningún `business_id` ni parámetro del cliente, se autentican solo con la firma HMAC (sin secreto configurado, responden 401) y están en la tabla de aislamiento como públicas, con sus tests en `outbox.test.ts`. Cada evento y cada recordatorio lleva el `business_id` de su fila.
+
+## F7-4. Reglas del recordatorio
+
+- Reservas `confirmed` de un cliente con cuenta, que empiecen en las próximas 24 h y sin `reminder_sent_at`.
+- No llevan recordatorio las reservas hechas con menos de 24 h de antelación (la confirmación ya llegó hace poco).
+- Mover la reserva borra `reminder_sent_at`: la hora nueva tiene su propio aviso.
+- n8n marca la reserva (`POST /internal/reminders/:id/sent`) después de enviar. Si el marcado falla, el correo se repite en la pasada siguiente: preferimos un aviso de más a uno de menos.
+
+## F7-5. Qué avisa y cómo
+
+- Avisan: reservar, confirmar una propuesta (una sola vez por reserva), mover y cancelar, tanto el cliente como el negocio. Una reserva manual del negocio (cliente sin cuenta) no avisa a nadie. Si cancela el negocio, solo se escribe al cliente.
+- Correo en **texto plano**: nombre y notas del cliente se escriben tal cual y no pueden inyectar HTML. Los asuntos pierden los saltos de línea. Sin el pie «enviado con n8n».
+- Remitente `no-reply@agendia.test`; el proveedor SMTP real se decide en la Fase 8 (SPEC §12).
+
+## F7-6. Configuración de n8n
+
+`docker-compose.yml` pasa a n8n `AGENDIA_AUTOMATION_SECRET`, `AGENDIA_API_URL` (`host.docker.internal`), `NODE_FUNCTION_ALLOW_BUILTIN=crypto` (los nodos de código firman y verifican con `crypto`) y `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` (para leer el secreto). Es una configuración de desarrollo: los workflows pueden ver las variables de entorno de n8n. En producción conviene usar credenciales de n8n.

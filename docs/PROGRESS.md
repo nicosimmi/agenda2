@@ -1,7 +1,7 @@
 # PROGRESS
 
-**Última actualización:** 2026-10-06 · Claude Code (Sonnet 5.5)
-**Fase actual:** 6 — Agente en la web (rama `fase-6/agente-web`) **Estado:** terminada, con la revisión cruzada corregida (F6-9), a falta de tu confirmación para el merge. Las Fases 3, 4 y 5 están integradas y etiquetadas.
+**Última actualización:** 2026-10-07 · Claude Code (Sonnet 5.5)
+**Fase actual:** 7 — Automatizaciones (rama `fase-7/automatizaciones`) **Estado:** terminada, a falta de tu confirmación para el merge. Las Fases 3 a 6 están integradas y etiquetadas (`fase-3` a `fase-6`), solo en local: `origin/main` va por detrás.
 
 ## Hecho
 
@@ -15,6 +15,24 @@
   - Suite de aislamiento con tabla de rutas (`isolation.test.ts`). 69 tests en verde y CI verde.
   - Revisión cruzada (subagente sin contexto) hecha: sin hallazgos graves; corregidos 7 de 9, decisiones F2-1 a F2-9.
 - RLS aplazada (F2-5).
+
+## Hecho en la Fase 7
+
+- API: outbox (`outbox.ts`): cada reserva creada, confirmada desde una propuesta, movida o cancelada anota su evento en la misma transacción. Un temporizador de la API lo entrega a n8n con firma HMAC (`signing.ts`) y reintenta con espera creciente. Rutas `GET /internal/reminders` y `POST /internal/reminders/:id/sent` para n8n, autenticadas solo por la firma. Migración `0005` (`next_attempt_at`, `reminder_sent_at`). Decisiones F7-1 a F7-6.
+- n8n: cuatro workflows en `automation/` (reserva creada, movida, cancelada y recordatorio de 24 h), credencial SMTP de Mailpit y variables en `docker-compose.yml`. Correos de texto plano.
+- Tests: `outbox.test.ts` (firma, eventos en la transacción, entrega y reintentos con un fetch falso, recordatorios) y las dos rutas nuevas en la tabla de aislamiento.
+- Verificado a mano con n8n y Mailpit reales: reservar, mover y cancelar mandan sus correos al cliente y al negocio; el recordatorio lanzado con `n8n execute` envía un correo y marca la reserva, y una segunda ejecución no lo repite.
+
+## Problemas abiertos
+
+- `apps/mcp-server/src/transports.test.ts`: 2 tests del transporte HTTP fallan (`HTTPParserError: Invalid character in chunk size`) también en el árbol limpio de la Fase 6, así que no vienen de la Fase 7. Pendiente de investigar; con ellos, `pnpm test` da 361 de 363.
+- La entrega a n8n no tiene test automático contra un n8n real (necesita Docker); los tests de la API usan un fetch falso y la integración se probó a mano.
+- Importar de nuevo un workflow desde `automation/` exige copiar los ficheros como root y reiniciar n8n (pasos en el README).
+
+## Pendiente tras la Fase 7
+
+- Proveedor SMTP real y remitente propio (Fase 8).
+- Panel: ver los eventos del outbox que agotaron sus reintentos.
 
 ## Hecho en la Fase 6
 

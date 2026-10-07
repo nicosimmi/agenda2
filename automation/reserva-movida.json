@@ -1,0 +1,212 @@
+[
+  {
+    "id": "agendia-reserva-movida",
+    "name": "AgendIA · Reserva movida",
+    "nodes": [
+      {
+        "id": "webhook",
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          300
+        ],
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "agendia-booking-rescheduled",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "webhookId": "agendia-booking-rescheduled"
+      },
+      {
+        "id": "verificar-firma",
+        "name": "Verificar firma",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          220,
+          300
+        ],
+        "parameters": {
+          "jsCode": "// Verifica la firma HMAC de la API: cuerpo firmado con el secreto compartido y marca de menos de 5 min.\nconst crypto = require('crypto');\nconst secret = $env.AGENDIA_AUTOMATION_SECRET || '';\nconst mac = (ts, data) => 'sha256=' + crypto.createHmac('sha256', secret).update(ts + '.' + data).digest('hex');\nconst signHeaders = (data) => {\n  const ts = String(Math.floor(Date.now() / 1000));\n  return { 'x-agendia-timestamp': ts, 'x-agendia-signature': mac(ts, data) };\n};\nconst { headers, body } = $input.first().json;\nconst ts = headers['x-agendia-timestamp'];\nconst sig = headers['x-agendia-signature'];\nlet ok = false;\nif (secret && ts && sig && /^\\d+$/.test(ts) && Math.abs(Date.now() / 1000 - Number(ts)) <= 300) {\n  const expected = mac(ts, JSON.stringify(body));\n  ok = sig.length === expected.length && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));\n}\nreturn [{ json: { ok, event: body } }];"
+        }
+      },
+      {
+        "id": "-firma-v-lida-",
+        "name": "¿Firma válida?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          440,
+          300
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "firma-ok",
+                "leftValue": "={{ $json.ok }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        }
+      },
+      {
+        "id": "redactar-emails",
+        "name": "Redactar emails",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          660,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const oneLine = (s) => String(s).replace(/[\\r\\n]+/g, ' ');\nconst details = (d) => [\n  'Negocio: ' + d.business.name,\n  'Servicio: ' + d.service.name + ' (' + d.service.price + ')',\n  'Con: ' + d.staff,\n  'Cuándo: ' + d.when,\n  'Código: ' + d.code,\n].join('\\n');\nconst mail = (to, subject, text) => ({ json: { to, subject: oneLine(subject), text } });\nconst d = $input.first().json.event.data;\nconst out = [];\nconst change = 'Antes: ' + d.previousWhen + '\\nAhora: ' + d.when;\nif (d.customer.email) {\n  out.push(mail(d.customer.email, 'Reserva movida: ' + d.service.name + ', ' + d.when,\n    'Hola ' + d.customer.name + ',\\n\\nTu reserva ha cambiado de hora.\\n\\n' + change + '\\n\\n' + details(d)));\n}\nif (d.business.email) {\n  out.push(mail(d.business.email, 'Reserva movida: ' + d.customer.name + ', ' + d.when,\n    d.customer.name + ' ha movido su reserva.\\n\\n' + change + '\\n\\n' + details(d)));\n}\nreturn out;"
+        }
+      },
+      {
+        "id": "enviar-email",
+        "name": "Enviar email",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2.1,
+        "position": [
+          880,
+          200
+        ],
+        "parameters": {
+          "fromEmail": "AgendIA <no-reply@agendia.test>",
+          "toEmail": "={{ $json.to }}",
+          "subject": "={{ $json.subject }}",
+          "emailFormat": "text",
+          "text": "={{ $json.text }}",
+          "options": {
+            "appendAttribution": false
+          }
+        },
+        "credentials": {
+          "smtp": {
+            "id": "agendia-mailpit",
+            "name": "Mailpit (desarrollo)"
+          }
+        }
+      },
+      {
+        "id": "responder-200",
+        "name": "Responder 200",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1100,
+          200
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { \"ok\": true } }}",
+          "options": {
+            "responseCode": 200
+          }
+        }
+      },
+      {
+        "id": "responder-401",
+        "name": "Responder 401",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          660,
+          420
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { \"ok\": false, \"error\": \"Firma no válida\" } }}",
+          "options": {
+            "responseCode": 401
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Verificar firma",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Verificar firma": {
+        "main": [
+          [
+            {
+              "node": "¿Firma válida?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿Firma válida?": {
+        "main": [
+          [
+            {
+              "node": "Redactar emails",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Responder 401",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Redactar emails": {
+        "main": [
+          [
+            {
+              "node": "Enviar email",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Enviar email": {
+        "main": [
+          [
+            {
+              "node": "Responder 200",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "active": false,
+    "pinData": {}
+  }
+]
