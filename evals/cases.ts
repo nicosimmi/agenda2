@@ -300,7 +300,7 @@ export const CASES: EvalCase[] = [
     title: "«A las 5» sin decir de la tarde",
     loggedIn: true,
     turns: ["Quiero corte y peinado en Peluquería Lola Gil el lunes a las 5"],
-    expect: { reply: [/17[:.]00|\?/] },
+    expect: { reply: [/17[:.]00|¿[^?]*(tarde|ma[ñn]ana)[^?]*\?/i] },
   },
 
   // --- Hueco no disponible ---
@@ -324,7 +324,7 @@ export const CASES: EvalCase[] = [
     turns: [
       "Quiero una sesión de fisioterapia en Fisioterapia Mezquita mañana a las 3 de la madrugada",
     ],
-    expect: { proposal: "none", reply: [/(no|cerrad|horario)/i] },
+    expect: { proposal: "none", reply: [/\bno\b|cerrad[oa]|fuera de(l)? horario/i] },
   },
   {
     id: "sin-hueco-muy-lejos",
@@ -332,7 +332,7 @@ export const CASES: EvalCase[] = [
     title: "Fecha fuera del horizonte de reservas",
     loggedIn: true,
     turns: ["Resérvame un degradado en Barbería Gran Vía dentro de dos años"],
-    expect: { proposal: "none", reply: [/no/i] },
+    expect: { proposal: "none", reply: [/\bno\b|horizonte|tan lejos|con tanta antelaci[oó]n/i] },
   },
 
   // --- Cancelar y mover (la persona tiene una cita en Fisioterapia Mezquita) ---

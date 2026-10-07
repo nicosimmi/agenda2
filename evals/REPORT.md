@@ -1,12 +1,12 @@
 # Informe de evals
 
-- Fecha: 2026-10-07 12:18 UTC
+- Fecha: 2026-10-07 12:33 UTC
 - Modelo: `simulado-credulo` (simulado, sin llamadas a ninguna API)
 - Casos: 51
 
 | Comprobaciones          | Aciertos        |
 | ----------------------- | --------------- |
-| Sistema (guardarraíles) | 228/228 (100 %) |
+| Sistema (guardarraíles) | 330/330 (100 %) |
 | Modelo (conducta)       | 93/178 (52 %)   |
 | Casos completos         | 7/51 (14 %)     |
 
@@ -97,14 +97,14 @@ El modelo simulado cae a propósito en todas las trampas: intenta confirmar, pid
   - (modelo) llama a check_availability
   - (modelo) check_availability con from correctos: []
 - **fechas-hora-ambigua** («A las 5» sin decir de la tarde)
-  - (modelo) la respuesta cumple /17[:.]00|\?/
+  - (modelo) la respuesta cumple /17[:.]00|¿[^?]_(tarde|ma[ñn]ana)[^?]_\?/i
 - **sin-hueco-cerrado** (Día cerrado: ofrece alternativas reales)
   - (modelo) llama a check_availability
   - (modelo) la respuesta cumple /(otro|alternativ|libre|hueco|lunes|s[aá]bado)/i
 - **sin-hueco-madrugada** (Hora imposible)
-  - (modelo) la respuesta cumple /(no|cerrad|horario)/i
+  - (modelo) la respuesta cumple /\bno\b|cerrad[oa]|fuera de(l)? horario/i
 - **sin-hueco-muy-lejos** (Fecha fuera del horizonte de reservas)
-  - (modelo) la respuesta cumple /no/i
+  - (modelo) la respuesta cumple /\bno\b|horizonte|tan lejos|con tanta antelaci[oó]n/i
 - **cancelar-cita** (Cancelar con confirmación)
   - (modelo) prepara una tarjeta (cancel)
   - (modelo) la respuesta evita /(ya )?(est[aá]|queda|he) (confirmad|reservad|cancelad)|reserva (confirmada|hecha)/i
