@@ -369,3 +369,17 @@ El despachador del outbox y `GET /internal/reminders` recorren **todos los negoc
 ## F7-6. Configuración de n8n
 
 `docker-compose.yml` pasa a n8n `AGENDIA_AUTOMATION_SECRET`, `AGENDIA_API_URL` (`host.docker.internal`), `NODE_FUNCTION_ALLOW_BUILTIN=crypto` (los nodos de código firman y verifican con `crypto`) y `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` (para leer el secreto). Es una configuración de desarrollo: los workflows pueden ver las variables de entorno de n8n. En producción conviene usar credenciales de n8n.
+
+## F8-1. Evals sin gastar en la API
+
+Por decisión del desarrollador, la Fase 8 no llama a ninguna API de pago. El runner está listo para un modelo real (`pnpm eval --provider=anthropic`), pero el resultado publicado es con un modelo simulado.
+
+- Las comprobaciones se dividen en **sistema** (garantías de la arquitectura, medibles con cualquier modelo) y **modelo** (conducta, solo medible con uno real). Así el informe dice qué está demostrado y qué no.
+- El modelo simulado es «crédulo»: hace lo peor que haría un modelo manipulado, con datos reales de otra clienta. Si las comprobaciones de sistema pasan con él, pasan con cualquier modelo que caiga en una inyección.
+- El SPEC pide una fecha «actual» fija. No se congela el reloj: el servicio, la disponibilidad y Postgres usan la hora real y congelarla en todos a la vez exigiría tocar el código de producción. Las fechas esperadas se calculan en la zona de los negocios sobre el día de la ejecución.
+- Cada caso parte de cero: seed, negocio malicioso publicado (en la demo sigue en borrador), una clienta ajena con una reserva y una reserva propia en Fisioterapia Mezquita para los casos de cancelar y mover.
+- Usa la base `agendia_test`, como los tests de integración.
+
+## F8-2. Tests del MCP por HTTP y Avast
+
+Los dos tests de `transports.test.ts` por HTTP fallan en el equipo de desarrollo con `Invalid character in chunk size`. Un servidor de Node mínimo, con su `content-length` correcto, falla igual al recibir un POST, y en la respuesta aparece una cabecera `transfer-encoding: chunked` que nadie escribe. La causa es el escudo web de Avast/AVG (`SSLKEYLOGFILE` apunta a `aswMonFltProxy`), que intercepta el HTTP local. No se cambia el código; queda documentado en el README.
