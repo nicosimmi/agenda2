@@ -137,7 +137,7 @@ export const FAQ: Record<string, FaqItem[]> = {
     },
     {
       q: "¿Compartís mis datos con terceros?",
-      a: "No los vendemos ni los cedemos. Cuando exista el asistente de IA, sus conversaciones pasarán por un proveedor externo y te lo avisaremos antes de usarlo.",
+      a: "No los vendemos ni los cedemos. El asistente de IA envía lo que escribes en el chat a un proveedor externo (Anthropic) para responderte, y lo avisa en la propia ventana. Por eso conviene no escribir datos sensibles.",
     },
   ],
   noEncontrada: [
@@ -210,6 +210,20 @@ export const FAQ: Record<string, FaqItem[]> = {
     {
       q: "¿Puedo ver la agenda de un solo profesional?",
       a: "Sí, con el filtro Profesional de arriba.",
+    },
+  ],
+  panelAsistente: [
+    {
+      q: "¿Puede el asistente reservar sin que el cliente lo sepa?",
+      a: "No. El asistente solo prepara la propuesta. La reserva existe cuando el cliente pulsa «Confirmar» en su tarjeta; antes, el hueco queda retenido unos minutos y después se libera.",
+    },
+    {
+      q: "¿Veo lo que se dice en las conversaciones?",
+      a: "No. Aquí solo aparecen las acciones que afectan a tu negocio (consultas, propuestas y confirmaciones), sin el texto de los chats ni datos personales.",
+    },
+    {
+      q: "¿Dónde aparecen las reservas hechas con el asistente?",
+      a: "En tu agenda, como cualquier otra reserva confirmada.",
     },
   ],
 };

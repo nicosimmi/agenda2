@@ -120,7 +120,7 @@ export function AgendaMock() {
         </div>
       </div>
       <p className="text-muted mt-3 text-center text-xs">
-        Vista previa del asistente de IA, que llegará más adelante.
+        Ejemplo de cómo funciona el asistente de IA: propone, tú confirmas.
       </p>
     </div>
   );

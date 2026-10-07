@@ -1,6 +1,6 @@
 import { IconCalendarEvent, IconMapPin } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { api } from "../api.ts";
 import { useAuth } from "../auth.tsx";
@@ -29,6 +29,7 @@ import {
   SubmitButton,
   useAction,
 } from "../ui.tsx";
+import { BOOKINGS_CHANGED } from "../chat/useAgentChat.ts";
 import { useApi } from "../useApi.ts";
 
 const STATUS: Record<MyBooking["status"], [string, string]> = {
@@ -144,6 +145,13 @@ function BookingCard({
 export function MyBookings() {
   const { me } = useAuth();
   const bookings = useApi<MyBooking[]>(me?.role === "customer" ? "/me/bookings" : null);
+  const reloadBookings = bookings.reload;
+  // El asistente de IA puede confirmar o cancelar una reserva mientras esta pantalla está abierta.
+  useEffect(() => {
+    const onChange = () => void reloadBookings();
+    window.addEventListener(BOOKINGS_CHANGED, onChange);
+    return () => window.removeEventListener(BOOKINGS_CHANGED, onChange);
+  }, [reloadBookings]);
   const [tab, setTab] = useState<"next" | "past">("next");
   const [cancelling, setCancelling] = useState<MyBooking | null>(null);
   const [moving, setMoving] = useState<MyBooking | null>(null);

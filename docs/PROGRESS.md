@@ -1,7 +1,7 @@
 # PROGRESS
 
 **Última actualización:** 2026-10-06 · Claude Code (Sonnet 5.5)
-**Fase actual:** 5 — Servidor MCP (rama `fase-5/servidor-mcp`) **Estado:** terminada a falta de la revisión cruzada y de tu confirmación para el merge. Las Fases 3 y 4 están integradas y etiquetadas.
+**Fase actual:** 6 — Agente en la web (rama `fase-6/agente-web`) **Estado:** terminada, con la revisión cruzada corregida (F6-9), a falta de tu confirmación para el merge. Las Fases 3, 4 y 5 están integradas y etiquetadas.
 
 ## Hecho
 
@@ -15,6 +15,13 @@
   - Suite de aislamiento con tabla de rutas (`isolation.test.ts`). 69 tests en verde y CI verde.
   - Revisión cruzada (subagente sin contexto) hecha: sin hallazgos graves; corregidos 7 de 9, decisiones F2-1 a F2-9.
 - RLS aplazada (F2-5).
+
+## Hecho en la Fase 6
+
+- API: servicio del agente (`apps/api/src/agent`): bucle del modelo con herramientas MCP, interfaz `LlmProvider` (Anthropic, demostración y simulado), prompt, sesiones de chat, topes de gasto, ritmo, tiempo y herramientas, registro en `agent_events`, y degradación sin proveedor. Rutas `GET|POST /public/chat` (SSE), `POST /me/agent/actions/:id/confirm|discard` y `GET /business/agent-events`. Decisiones F6-1 a F6-8.
+- Web: chat flotante en las páginas públicas (streaming, estado de herramientas, tarjeta con Confirmar y Descartar, aviso de IA de un tercero, errores con salida al buscador), y **Panel → Asistente** con el registro del agente. Textos de privacidad, preguntas frecuentes y portada actualizados.
+- Tests: 29 nuevos de integración con un modelo simulado (el modelo no puede confirmar, aislamiento de propuestas, doble clic, tope de gasto, tiempo, ritmo, fallos, inyección, proveedor de Anthropic con cliente simulado). Isolation con las rutas nuevas. E2E con el guion de demostración: el asistente propone y la reserva solo existe al pulsar el botón.
+- **No probado con la API real de Anthropic:** no hay `ANTHROPIC_API_KEY`. Antes de probarlo: límite de gasto en la consola de Anthropic y `LLM_DAILY_BUDGET_EUR` bajo.
 
 ## Hecho en la Fase 5
 
@@ -31,6 +38,13 @@
 - E2E de Playwright: 6 pruebas (propietario, cookies, tema, subir y FAQ, buscador rápido y el recorrido completo del cliente, que comprueba que el negocio ve la cita). Necesita el seed cargado.
 - Pendiente de la Fase 3 resuelto: categorías desde la API, `useApi` sin carreras.
 
+## Pendiente tras la Fase 6
+
+- Primera prueba con la API real (pedir permiso: consume dinero) y ajustar `LLM_PRICE_*` a la tarifa vigente.
+- Sesiones de chat en memoria: con más de una instancia de la API habría que guardarlas fuera.
+- La beta de modelos de reserva (`fallbacks`) no está activada.
+- Las evals del agente son de la Fase 8.
+
 ## Pendiente tras la Fase 5
 
 - El agente web (Fase 6) usará esta API: token de leer y proponer para el modelo, y confirmación por botón.
@@ -39,7 +53,6 @@
 
 ## Pendiente tras la Fase 4
 
-- El asistente de IA (Fase 6) aparece en la portada como «muy pronto».
 - Textos de la interfaz aún en los componentes, no en un fichero único (F4-4).
 - El E2E no está en el CI (necesita Postgres migrado, el seed y Chromium).
 - Los ajustes de preaviso, horizonte y cancelación del negocio no tienen pantalla en el panel.

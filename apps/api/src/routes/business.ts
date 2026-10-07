@@ -13,6 +13,8 @@ import {
 } from "@agendia/shared";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { desc, eq } from "drizzle-orm";
+import { agentEvents } from "../db/schema.ts";
 import { forbidden, notFound } from "../errors.ts";
 import { requireRole, tenantOf, userOf } from "../guards.ts";
 import * as panel from "../panel.ts";
@@ -117,6 +119,23 @@ export async function businessRoutes(app: FastifyInstance) {
     await panel.deleteTimeOff(db, tenantOf(req), idParams.parse(req.params).id);
     return reply.code(204).send();
   });
+
+  // Registro del asistente de IA en este negocio. Solo metadatos (sin textos de la conversación
+  // ni identificadores de personas): el negocio ve qué hizo el agente con sus reservas.
+  app.get("/agent-events", async (req) =>
+    db
+      .select({
+        id: agentEvents.id,
+        type: agentEvents.type,
+        toolName: agentEvents.toolName,
+        bookingId: agentEvents.bookingId,
+        createdAt: agentEvents.createdAt,
+      })
+      .from(agentEvents)
+      .where(eq(agentEvents.businessId, tenantOf(req).businessId))
+      .orderBy(desc(agentEvents.createdAt))
+      .limit(100),
+  );
 
   // --- Agenda ---
   app.get("/bookings", async (req) => {

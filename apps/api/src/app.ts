@@ -8,7 +8,9 @@ import Fastify, { type FastifyError } from "fastify";
 import { ZodError } from "zod";
 import type { Db } from "./db/client.ts";
 import { AppError } from "./errors.ts";
+import { createAgentService, DEFAULT_AGENT_CONFIG, type AgentConfig } from "./agent/service.ts";
 import { adminRoutes } from "./routes/admin.ts";
+import { agentActionRoutes, agentPublicRoutes } from "./routes/agent.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { businessRoutes } from "./routes/business.ts";
 import { customerRoutes } from "./routes/customer.ts";
@@ -44,6 +46,8 @@ export interface AppConfig {
    * No se usa un número de saltos: Fastify lo desaconseja porque permite falsear X-Forwarded-For.
    */
   trustedProxies: string[];
+  /** Agente de IA (SPEC §10); sin proveedor, el asistente queda desactivado. */
+  agent?: Partial<AgentConfig>;
 }
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -128,10 +132,15 @@ export async function buildApp(db: Db, config: AppConfig) {
   );
 
   app.get("/health", async () => ({ status: "ok" }));
+  const agent = createAgentService(app, db, { ...DEFAULT_AGENT_CONFIG, ...config.agent });
+  app.addHook("onClose", async () => agent.close());
+
   await app.register(publicRoutes, { prefix: "/public" });
+  await app.register(agentPublicRoutes, { prefix: "/public/chat", service: agent });
   await app.register(authRoutes, { prefix: "/auth" });
   await app.register(customerRoutes, { prefix: "/me" });
   await app.register(tokenRoutes, { prefix: "/me/tokens" });
+  await app.register(agentActionRoutes, { prefix: "/me/agent", service: agent });
   await app.register(businessRoutes, { prefix: "/business" });
   await app.register(adminRoutes, { prefix: "/admin" });
   return app;
