@@ -57,6 +57,10 @@ const RANGE = "from=2030-01-01T00:00:00Z&to=2030-01-31T00:00:00Z";
 const ROUTES: Record<string, RouteSpec> = {
   "GET /health": { access: "public" },
   "OPTIONS *": { access: "public" }, // preflight de CORS
+  // Rutas de n8n: sin sesión, firmadas con HMAC (probadas en outbox.test.ts). Recorren todos los
+  // negocios por diseño y no reciben ningún business_id del cliente.
+  "GET /internal/reminders": { access: "public" },
+  "POST /internal/reminders/:id/sent": { access: "public" },
   "GET /public/categories": { access: "public" },
   "GET /public/businesses": { access: "public" },
   "GET /public/businesses/:slug": { access: "public" },

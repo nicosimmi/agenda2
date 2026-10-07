@@ -15,6 +15,7 @@ import type { Db } from "./db/client.ts";
 import { bookings, businesses, services, staff } from "./db/schema.ts";
 import { AppError, notFound, pgErrorCode } from "./errors.ts";
 import type { StoredResponse } from "./idempotency.ts";
+import { enqueueBookingEvent } from "./outbox.ts";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
@@ -81,6 +82,7 @@ export async function createCustomerBooking(
         source: "web",
       })
       .returning({ id: bookings.id, code: bookings.code });
+    await enqueueBookingEvent(tx, "booking.created", row!.id);
     const [member] = await tx
       .select({ name: staff.name })
       .from(staff)
@@ -141,6 +143,7 @@ export async function cancelCustomerBooking(db: Db, userId: string, id: string) 
       .update(bookings)
       .set({ status: "cancelled", updatedAt: new Date() })
       .where(eq(bookings.id, id));
+    await enqueueBookingEvent(tx, "booking.cancelled", id, { cancelledBy: "customer" });
     return { id, status: "cancelled" as const };
   });
 }
@@ -177,8 +180,12 @@ export async function rescheduleCustomerBooking(
           startsAt: slot.startsAt,
           endsAt: slot.endsAt,
           updatedAt: new Date(),
+          reminderSentAt: null, // a la hora nueva le toca su propio recordatorio
         })
         .where(eq(bookings.id, id));
+      await enqueueBookingEvent(tx, "booking.rescheduled", id, {
+        previousStartsAt: booking.startsAt,
+      });
       return { id, status: booking.status, startsAt: slot.startsAt };
     });
   } catch (error) {
@@ -290,22 +297,27 @@ export async function proposeCustomerBooking(
 
 /** Confirma una propuesta propia que no haya caducado. Repetirlo sobre una ya confirmada no cambia nada. */
 export async function confirmProposal(db: Db, userId: string, id: string) {
-  const confirmed = await db
-    .update(bookings)
-    .set({ status: "confirmed", expiresAt: null, updatedAt: new Date() })
-    .where(
-      and(
-        eq(bookings.id, id),
-        eq(bookings.customerId, userId),
-        eq(bookings.status, "pending"),
-        gt(bookings.expiresAt, new Date()),
-        // Una propuesta de una hora que ya ha empezado, o de un negocio suspendido entretanto,
-        // no puede convertirse en reserva.
-        gt(bookings.startsAt, new Date()),
-        sql`exists (select 1 from ${businesses} where ${businesses.id} = ${bookings.businessId} and ${businesses.status} = 'published')`,
-      ),
-    )
-    .returning({ id: bookings.id });
+  // El aviso se anota solo si esta llamada es la que confirma: repetirla no manda otro email.
+  const confirmed = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(bookings)
+      .set({ status: "confirmed", expiresAt: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(bookings.id, id),
+          eq(bookings.customerId, userId),
+          eq(bookings.status, "pending"),
+          gt(bookings.expiresAt, new Date()),
+          // Una propuesta de una hora que ya ha empezado, o de un negocio suspendido entretanto,
+          // no puede convertirse en reserva.
+          gt(bookings.startsAt, new Date()),
+          sql`exists (select 1 from ${businesses} where ${businesses.id} = ${bookings.businessId} and ${businesses.status} = 'published')`,
+        ),
+      )
+      .returning({ id: bookings.id });
+    if (rows.length) await enqueueBookingEvent(tx, "booking.created", id);
+    return rows;
+  });
   if (!confirmed.length) {
     const [own] = await db
       .select({ status: bookings.status })

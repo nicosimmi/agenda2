@@ -14,6 +14,7 @@ import { agentActionRoutes, agentPublicRoutes } from "./routes/agent.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { businessRoutes } from "./routes/business.ts";
 import { customerRoutes } from "./routes/customer.ts";
+import { internalRoutes } from "./routes/internal.ts";
 import { publicRoutes } from "./routes/public.ts";
 import { tokenRoutes } from "./routes/tokens.ts";
 import { SESSION_COOKIE, findSessionUser, type SessionUser } from "./session.ts";
@@ -48,6 +49,8 @@ export interface AppConfig {
   trustedProxies: string[];
   /** Agente de IA (SPEC §10); sin proveedor, el asistente queda desactivado. */
   agent?: Partial<AgentConfig>;
+  /** Secreto HMAC compartido con n8n (SPEC §12); sin él, las rutas /internal rechazan todo. */
+  automationSecret?: string | undefined;
 }
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -143,6 +146,7 @@ export async function buildApp(db: Db, config: AppConfig) {
   await app.register(agentActionRoutes, { prefix: "/me/agent", service: agent });
   await app.register(businessRoutes, { prefix: "/business" });
   await app.register(adminRoutes, { prefix: "/admin" });
+  await app.register(internalRoutes, { prefix: "/internal" });
   return app;
 }
 

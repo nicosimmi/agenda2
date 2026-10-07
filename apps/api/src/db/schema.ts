@@ -237,6 +237,7 @@ export const bookings = pgTable(
     createdAt: createdAt(),
     updatedAt: instant("updated_at").notNull().defaultNow(),
     expiresAt: instant("expires_at"), // solo en pending: retiene el hueco 10 min
+    reminderSentAt: instant("reminder_sent_at"), // lo marca n8n tras enviar el recordatorio de 24 h
   },
   (t) => [
     unique("bookings_id_business_unique").on(t.id, t.businessId),
@@ -300,6 +301,7 @@ export const outboxEvents = pgTable(
     createdAt: createdAt(),
     deliveredAt: instant("delivered_at"),
     attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: instant("next_attempt_at").notNull().defaultNow(), // reintentos con espera creciente
   },
   (t) => [
     index("outbox_events_pending_idx")

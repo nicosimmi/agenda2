@@ -14,6 +14,7 @@ import {
   workingHours,
 } from "./db/schema.ts";
 import { AppError, notFound, pgErrorCode } from "./errors.ts";
+import { enqueueBookingEvent } from "./outbox.ts";
 import type { TenantContext } from "./tenant.ts";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -433,7 +434,12 @@ export async function setBookingStatus(
   status: "cancelled" | "completed" | "no_show",
 ) {
   const [row] = await db
-    .select({ status: bookings.status, startsAt: bookings.startsAt, expiresAt: bookings.expiresAt })
+    .select({
+      status: bookings.status,
+      startsAt: bookings.startsAt,
+      expiresAt: bookings.expiresAt,
+      customerId: bookings.customerId,
+    })
     .from(bookings)
     .where(and(eq(bookings.id, id), eq(bookings.businessId, t.businessId)));
   if (!row) throw notFound("Reserva");
@@ -445,9 +451,15 @@ export async function setBookingStatus(
   if (status !== "cancelled" && row.startsAt > new Date()) {
     throw new AppError(409, "CONFLICT", "La reserva todavía no ha empezado");
   }
-  await db
-    .update(bookings)
-    .set({ status, updatedAt: new Date() })
-    .where(and(eq(bookings.id, id), eq(bookings.businessId, t.businessId)));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(bookings)
+      .set({ status, updatedAt: new Date() })
+      .where(and(eq(bookings.id, id), eq(bookings.businessId, t.businessId)));
+    // Solo se avisa a un cliente con cuenta: una reserva manual no tiene a quién escribir.
+    if (status === "cancelled" && row.customerId) {
+      await enqueueBookingEvent(tx, "booking.cancelled", id, { cancelledBy: "business" });
+    }
+  });
   return { id, status };
 }
