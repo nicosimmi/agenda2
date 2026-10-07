@@ -1,0 +1,223 @@
+[
+  {
+    "id": "agendia-recordatorio-24h",
+    "name": "AgendIA · Recordatorio 24 h",
+    "nodes": [
+      {
+        "id": "cada-15-minutos",
+        "name": "Cada 15 minutos",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          0,
+          300
+        ],
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "minutes",
+                "minutesInterval": 15
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "lanzar-a-mano",
+        "name": "Lanzar a mano",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          480
+        ],
+        "parameters": {
+          "inputSource": "passthrough"
+        }
+      },
+      {
+        "id": "firmar-petici-n",
+        "name": "Firmar petición",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          220,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const crypto = require('crypto');\nconst secret = $env.AGENDIA_AUTOMATION_SECRET || '';\nconst mac = (ts, data) => 'sha256=' + crypto.createHmac('sha256', secret).update(ts + '.' + data).digest('hex');\nconst signHeaders = (data) => {\n  const ts = String(Math.floor(Date.now() / 1000));\n  return { 'x-agendia-timestamp': ts, 'x-agendia-signature': mac(ts, data) };\n};\nreturn [{ json: { headers: signHeaders('GET /internal/reminders\\n') } }];"
+        }
+      },
+      {
+        "id": "pedir-recordatorios",
+        "name": "Pedir recordatorios",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          440,
+          300
+        ],
+        "parameters": {
+          "url": "={{ $env.AGENDIA_API_URL }}/internal/reminders",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-agendia-timestamp",
+                "value": "={{ $json.headers['x-agendia-timestamp'] }}"
+              },
+              {
+                "name": "x-agendia-signature",
+                "value": "={{ $json.headers['x-agendia-signature'] }}"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "redactar-recordatorio",
+        "name": "Redactar recordatorio",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          660,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const oneLine = (s) => String(s).replace(/[\\r\\n]+/g, ' ');\nconst details = (d) => [\n  'Negocio: ' + d.business.name,\n  'Servicio: ' + d.service.name + ' (' + d.service.price + ')',\n  'Con: ' + d.staff,\n  'Cuándo: ' + d.when,\n  'Código: ' + d.code,\n].join('\\n');\nconst mail = (to, subject, text) => ({ json: { to, subject: oneLine(subject), text } });\nconst crypto = require('crypto');\nconst secret = $env.AGENDIA_AUTOMATION_SECRET || '';\nconst mac = (ts, data) => 'sha256=' + crypto.createHmac('sha256', secret).update(ts + '.' + data).digest('hex');\nconst signHeaders = (data) => {\n  const ts = String(Math.floor(Date.now() / 1000));\n  return { 'x-agendia-timestamp': ts, 'x-agendia-signature': mac(ts, data) };\n};\n// Un item por reserva: el email y la firma de la llamada que la marca como avisada.\nreturn $input.all().filter(({ json: d }) => d.bookingId).map(({ json: d }) => ({\n  json: {\n    bookingId: d.bookingId,\n    to: d.customer.email,\n    subject: oneLine('Recordatorio: ' + d.service.name + ', ' + d.when),\n    text: 'Hola ' + d.customer.name + ',\\n\\nTienes una cita en menos de 24 horas.\\n\\n' + details(d) +\n      '\\n\\nSi no puedes ir, cancélala o muévela desde Mis reservas en AgendIA.',\n    markHeaders: signHeaders('POST /internal/reminders/' + d.bookingId + '/sent\\n'),\n  },\n}));"
+        }
+      },
+      {
+        "id": "enviar-email",
+        "name": "Enviar email",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2.1,
+        "position": [
+          880,
+          300
+        ],
+        "parameters": {
+          "fromEmail": "AgendIA <no-reply@agendia.test>",
+          "toEmail": "={{ $json.to }}",
+          "subject": "={{ $json.subject }}",
+          "emailFormat": "text",
+          "text": "={{ $json.text }}",
+          "options": {
+            "appendAttribution": false
+          }
+        },
+        "credentials": {
+          "smtp": {
+            "id": "agendia-mailpit",
+            "name": "Mailpit (desarrollo)"
+          }
+        }
+      },
+      {
+        "id": "marcar-como-avisada",
+        "name": "Marcar como avisada",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1100,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $env.AGENDIA_API_URL }}/internal/reminders/{{ $('Redactar recordatorio').item.json.bookingId }}/sent",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-agendia-timestamp",
+                "value": "={{ $('Redactar recordatorio').item.json.markHeaders['x-agendia-timestamp'] }}"
+              },
+              {
+                "name": "x-agendia-signature",
+                "value": "={{ $('Redactar recordatorio').item.json.markHeaders['x-agendia-signature'] }}"
+              }
+            ]
+          },
+          "options": {}
+        }
+      }
+    ],
+    "connections": {
+      "Cada 15 minutos": {
+        "main": [
+          [
+            {
+              "node": "Firmar petición",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Firmar petición": {
+        "main": [
+          [
+            {
+              "node": "Pedir recordatorios",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Pedir recordatorios": {
+        "main": [
+          [
+            {
+              "node": "Redactar recordatorio",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Redactar recordatorio": {
+        "main": [
+          [
+            {
+              "node": "Enviar email",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Enviar email": {
+        "main": [
+          [
+            {
+              "node": "Marcar como avisada",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Lanzar a mano": {
+        "main": [
+          [
+            {
+              "node": "Firmar petición",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "active": false,
+    "pinData": {}
+  }
+]

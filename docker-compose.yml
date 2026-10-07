@@ -34,6 +34,13 @@ services:
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Madrid}
       TZ: ${GENERIC_TIMEZONE:-Europe/Madrid}
       N8N_PORT: 5678
+      # Los workflows de /automation verifican la firma HMAC de la API y firman sus llamadas a ella.
+      AGENDIA_AUTOMATION_SECRET: ${AUTOMATION_SECRET:-}
+      AGENDIA_API_URL: http://host.docker.internal:${API_PORT:-3000}
+      NODE_FUNCTION_ALLOW_BUILTIN: crypto
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # en Linux; Docker Desktop ya lo trae
     ports:
       - "127.0.0.1:${N8N_PORT:-5678}:5678"
     volumes:
