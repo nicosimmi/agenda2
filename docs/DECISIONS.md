@@ -369,3 +369,35 @@ El despachador del outbox y `GET /internal/reminders` recorren **todos los negoc
 ## F7-6. Configuración de n8n
 
 `docker-compose.yml` pasa a n8n `AGENDIA_AUTOMATION_SECRET`, `AGENDIA_API_URL` (`host.docker.internal`), `NODE_FUNCTION_ALLOW_BUILTIN=crypto` (los nodos de código firman y verifican con `crypto`) y `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` (para leer el secreto). Es una configuración de desarrollo: los workflows pueden ver las variables de entorno de n8n. En producción conviene usar credenciales de n8n.
+
+## F8-1. Evals sin gastar en la API
+
+Por decisión del desarrollador, la Fase 8 no llama a ninguna API de pago. El runner está listo para un modelo real (`pnpm eval --provider=anthropic`), pero el resultado publicado es con un modelo simulado.
+
+- Las comprobaciones se dividen en **sistema** (garantías de la arquitectura, medibles con cualquier modelo) y **modelo** (conducta, solo medible con uno real). Así el informe dice qué está demostrado y qué no.
+- El modelo simulado es «crédulo»: hace lo peor que haría un modelo manipulado, con datos reales de otra clienta. Si las comprobaciones de sistema pasan con él, pasan con cualquier modelo que caiga en una inyección.
+- El SPEC pide una fecha «actual» fija. No se congela el reloj: el servicio, la disponibilidad y Postgres usan la hora real y congelarla en todos a la vez exigiría tocar el código de producción. Las fechas esperadas se calculan en la zona de los negocios sobre el día de la ejecución.
+- Cada caso parte de cero: seed, negocio malicioso publicado (en la demo sigue en borrador), una clienta ajena con una reserva y una reserva propia en Fisioterapia Mezquita para los casos de cancelar y mover.
+- Usa la base `agendia_test`, como los tests de integración.
+
+## F8-2. Tests del MCP por HTTP y Avast
+
+Los dos tests de `transports.test.ts` por HTTP fallan en el equipo de desarrollo con `Invalid character in chunk size`. Un servidor de Node mínimo, con su `content-length` correcto, falla igual al recibir un POST, y en la respuesta aparece una cabecera `transfer-encoding: chunked` que nadie escribe. La causa es el escudo web de Avast/AVG (`SSLKEYLOGFILE` apunta a `aswMonFltProxy`), que intercepta el HTTP local. No se cambia el código; queda documentado en el README.
+
+## F8-3. Revisión cruzada final (Fases 7 y 8, subagente sin contexto)
+
+Sin hallazgos graves. La excepción F7-3 (rutas `/internal` y despachador sin tenant) se considera bien acotada. Corregidos, con test cuando se puede:
+
+1. **`.env.example` (media).** Traía `N8N_WEBHOOK_BASE` relleno y el secreto vacío, así que la API no arrancaba tras copiarlo. Ahora viene vacío.
+2. **Avisos de reservas que nunca se confirmaron (media).** Cancelar o mover una propuesta `pending` mandaba correos. Ahora solo avisa si la reserva estaba `confirmed`.
+3. **Recordatorio frágil (media).** Un correo que fallaba paraba la tanda entera, y las firmas del marcado se hacían antes de enviar y podían caducar. Ahora el envío sigue con los demás aunque uno falle, y cada marcado se firma justo antes de la llamada.
+4. **Webhook de otro tipo (baja-media).** Un cuerpo firmado de `booking.created` valía en el webhook de cancelación. Cada workflow comprueba ahora `type` (probado contra n8n: 401).
+5. **HTTP dentro de la transacción (baja-media).** El despachador reserva los eventos en una transacción corta (`next_attempt_at` + 60 s) y envía fuera de ella.
+6. **Carreras (baja).** Los `UPDATE` de cancelar, mover y cambiar de estado comprueban el estado en el propio `WHERE`; dos cancelaciones a la vez dan 200 y 409 con un solo aviso.
+7. **Recordatorio tras mover (baja).** La regla de antelación usa `updated_at`: una cita movida a dentro de pocas horas no recibe el recordatorio justo después del aviso de cambio.
+8. a 10. **Evals (baja).** Una herramienta no ofrecida debe tener un resultado con error (falta de resultado = fallo), hay una comprobación de que se vieron todos los resultados, otra de que el chat atendió el caso (sin tope de gasto ni ritmo de por medio), y la de fugas incluye el nombre de la otra clienta.
+9. **Expresiones demasiado permisivas (baja).** `\bno\b` en vez de `no`, y la hora ambigua exige preguntar por mañana o tarde.
+10. **Tests que faltaban (baja).** Cancelación del negocio, reserva manual sin aviso, borrado del recordatorio al mover, firma de GET que no vale para POST, abandono tras 8 intentos, y `JSON.stringify(JSON.parse(cuerpo))` igual al cuerpo con tildes, comillas, emojis y U+2028.
+11. **Retención (baja, RGPD).** El payload se vacía al entregarse el evento.
+
+**Sin cambiar:** cancelar y mover después del clic solo se prueban en los tests de la API, no en el runner de evals. El recordatorio con los cambios de este punto se ha importado y su código se ha validado, pero no se ha vuelto a ejecutar de punta a punta, porque la API de desarrollo estaba parada.

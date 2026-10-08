@@ -7,7 +7,7 @@ import {
   type rescheduleSchema,
 } from "@agendia/shared";
 import { localDate } from "@agendia/core";
-import { and, eq, gt, lt, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { findSlots, type BusinessRow } from "./availability.ts";
 import { newBookingCode } from "./db/booking-code.ts";
@@ -106,6 +106,9 @@ export async function createCustomerBooking(
   }
 }
 
+const CHANGEABLE = ["pending", "confirmed"] as const;
+const gone = () => new AppError(409, "CONFLICT", "Esta reserva ya no admite cambios");
+
 /** Reserva propia, con los datos del negocio que hacen falta para aplicar sus reglas. */
 async function ownBooking(tx: Tx, userId: string, id: string) {
   const [row] = await tx
@@ -122,9 +125,7 @@ async function ownBooking(tx: Tx, userId: string, id: string) {
 
 function assertChangeable(row: Awaited<ReturnType<typeof ownBooking>>) {
   const { booking, business } = row;
-  if (booking.status !== "pending" && booking.status !== "confirmed") {
-    throw new AppError(409, "CONFLICT", "Esta reserva ya no admite cambios");
-  }
+  if (booking.status !== "pending" && booking.status !== "confirmed") throw gone();
   const limitMs = business.cancelLimitHours * 3_600_000;
   if (booking.startsAt.getTime() - Date.now() < limitMs) {
     throw new AppError(
@@ -139,11 +140,18 @@ export async function cancelCustomerBooking(db: Db, userId: string, id: string) 
   return db.transaction(async (tx) => {
     const row = await ownBooking(tx, userId, id);
     assertChangeable(row);
-    await tx
+    // El estado se vuelve a comprobar en el UPDATE: si otra petición la ha cambiado entretanto,
+    // no se cancela dos veces ni se manda un segundo aviso.
+    const updated = await tx
       .update(bookings)
       .set({ status: "cancelled", updatedAt: new Date() })
-      .where(eq(bookings.id, id));
-    await enqueueBookingEvent(tx, "booking.cancelled", id, { cancelledBy: "customer" });
+      .where(and(eq(bookings.id, id), inArray(bookings.status, CHANGEABLE)))
+      .returning({ id: bookings.id });
+    if (!updated.length) throw gone();
+    // Una propuesta sin confirmar nunca se avisó: tampoco se avisa de que se cancela.
+    if (row.booking.status === "confirmed") {
+      await enqueueBookingEvent(tx, "booking.cancelled", id, { cancelledBy: "customer" });
+    }
     return { id, status: "cancelled" as const };
   });
 }
@@ -173,7 +181,7 @@ export async function rescheduleCustomerBooking(
       const slot = slots.find((s) => s.startsAt.getTime() === input.startsAt.getTime());
       if (!slot) throw taken();
       await expireStalePending(tx, slot.staffId);
-      await tx
+      const moved = await tx
         .update(bookings)
         .set({
           staffId: slot.staffId,
@@ -182,10 +190,14 @@ export async function rescheduleCustomerBooking(
           updatedAt: new Date(),
           reminderSentAt: null, // a la hora nueva le toca su propio recordatorio
         })
-        .where(eq(bookings.id, id));
-      await enqueueBookingEvent(tx, "booking.rescheduled", id, {
-        previousStartsAt: booking.startsAt,
-      });
+        .where(and(eq(bookings.id, id), inArray(bookings.status, CHANGEABLE)))
+        .returning({ id: bookings.id });
+      if (!moved.length) throw gone();
+      if (booking.status === "confirmed") {
+        await enqueueBookingEvent(tx, "booking.rescheduled", id, {
+          previousStartsAt: booking.startsAt,
+        });
+      }
       return { id, status: booking.status, startsAt: slot.startsAt };
     });
   } catch (error) {

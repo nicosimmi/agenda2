@@ -25,7 +25,8 @@ export async function internalRoutes(app: FastifyInstance) {
   });
 
   // Reservas confirmadas que empiezan en las próximas 24 h y no tienen recordatorio. Las que se
-  // hicieron con menos de 24 h de antelación no lo llevan: la confirmación ya se envió hace poco.
+  // reservaron, confirmaron o movieron con menos de 24 h de antelación no lo llevan: el aviso de
+  // confirmación o de cambio se envió hace poco (por eso se mira updated_at y no created_at).
   app.get("/reminders", async () => {
     const limit = new Date(Date.now() + REMINDER_HOURS * 3_600_000);
     const due = await db
@@ -38,7 +39,7 @@ export async function internalRoutes(app: FastifyInstance) {
           isNull(bookings.reminderSentAt),
           gt(bookings.startsAt, new Date()),
           lte(bookings.startsAt, limit),
-          sql`${bookings.createdAt} < ${bookings.startsAt} - interval '24 hours'`,
+          sql`${bookings.updatedAt} < ${bookings.startsAt} - interval '24 hours'`,
         ),
       )
       .orderBy(asc(bookings.startsAt))

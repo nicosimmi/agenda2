@@ -87,7 +87,7 @@
           300
         ],
         "parameters": {
-          "jsCode": "const oneLine = (s) => String(s).replace(/[\\r\\n]+/g, ' ');\nconst details = (d) => [\n  'Negocio: ' + d.business.name,\n  'Servicio: ' + d.service.name + ' (' + d.service.price + ')',\n  'Con: ' + d.staff,\n  'Cuándo: ' + d.when,\n  'Código: ' + d.code,\n].join('\\n');\nconst mail = (to, subject, text) => ({ json: { to, subject: oneLine(subject), text } });\nconst crypto = require('crypto');\nconst secret = $env.AGENDIA_AUTOMATION_SECRET || '';\nconst mac = (ts, data) => 'sha256=' + crypto.createHmac('sha256', secret).update(ts + '.' + data).digest('hex');\nconst signHeaders = (data) => {\n  const ts = String(Math.floor(Date.now() / 1000));\n  return { 'x-agendia-timestamp': ts, 'x-agendia-signature': mac(ts, data) };\n};\n// Un item por reserva: el email y la firma de la llamada que la marca como avisada.\nreturn $input.all().filter(({ json: d }) => d.bookingId).map(({ json: d }) => ({\n  json: {\n    bookingId: d.bookingId,\n    to: d.customer.email,\n    subject: oneLine('Recordatorio: ' + d.service.name + ', ' + d.when),\n    text: 'Hola ' + d.customer.name + ',\\n\\nTienes una cita en menos de 24 horas.\\n\\n' + details(d) +\n      '\\n\\nSi no puedes ir, cancélala o muévela desde Mis reservas en AgendIA.',\n    markHeaders: signHeaders('POST /internal/reminders/' + d.bookingId + '/sent\\n'),\n  },\n}));"
+          "jsCode": "const oneLine = (s) => String(s).replace(/[\\r\\n]+/g, ' ');\nconst details = (d) => [\n  'Negocio: ' + d.business.name,\n  'Servicio: ' + d.service.name + ' (' + d.service.price + ')',\n  'Con: ' + d.staff,\n  'Cuándo: ' + d.when,\n  'Código: ' + d.code,\n].join('\\n');\nconst mail = (to, subject, text) => ({ json: { to, subject: oneLine(subject), text } });\n// Un item por reserva con su email.\nreturn $input.all().filter(({ json: d }) => d.bookingId).map(({ json: d }) => ({\n  json: {\n    bookingId: d.bookingId,\n    to: d.customer.email,\n    subject: oneLine('Recordatorio: ' + d.service.name + ', ' + d.when),\n    text: 'Hola ' + d.customer.name + ',\\n\\nTienes una cita en menos de 24 horas.\\n\\n' + details(d) +\n      '\\n\\nSi no puedes ir, cancélala o muévela desde Mis reservas en AgendIA.',\n  },\n}));"
         }
       },
       {
@@ -114,6 +114,20 @@
             "id": "agendia-mailpit",
             "name": "Mailpit (desarrollo)"
           }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "firmar-marcado",
+        "name": "Firmar marcado",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1100,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const crypto = require('crypto');\nconst secret = $env.AGENDIA_AUTOMATION_SECRET || '';\nconst mac = (ts, data) => 'sha256=' + crypto.createHmac('sha256', secret).update(ts + '.' + data).digest('hex');\nconst signHeaders = (data) => {\n  const ts = String(Math.floor(Date.now() / 1000));\n  return { 'x-agendia-timestamp': ts, 'x-agendia-signature': mac(ts, data) };\n};\n// Solo las reservas cuyo correo salió, y con la firma hecha ahora (caduca a los 5 minutos).\nreturn $input.all().flatMap((item, i) => {\n  if (item.json.error) return [];\n  const bookingId = $('Redactar recordatorio').itemMatching(i).json.bookingId;\n  return [{ json: { bookingId, headers: signHeaders('POST /internal/reminders/' + bookingId + '/sent\\n') } }];\n});"
         }
       },
       {
@@ -122,28 +136,29 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          1100,
+          1320,
           300
         ],
         "parameters": {
           "method": "POST",
-          "url": "={{ $env.AGENDIA_API_URL }}/internal/reminders/{{ $('Redactar recordatorio').item.json.bookingId }}/sent",
+          "url": "={{ $env.AGENDIA_API_URL }}/internal/reminders/{{ $json.bookingId }}/sent",
           "sendHeaders": true,
           "specifyHeaders": "keypair",
           "headerParameters": {
             "parameters": [
               {
                 "name": "x-agendia-timestamp",
-                "value": "={{ $('Redactar recordatorio').item.json.markHeaders['x-agendia-timestamp'] }}"
+                "value": "={{ $json.headers['x-agendia-timestamp'] }}"
               },
               {
                 "name": "x-agendia-signature",
-                "value": "={{ $('Redactar recordatorio').item.json.markHeaders['x-agendia-signature'] }}"
+                "value": "={{ $json.headers['x-agendia-signature'] }}"
               }
             ]
           },
           "options": {}
-        }
+        },
+        "onError": "continueRegularOutput"
       }
     ],
     "connections": {
@@ -192,6 +207,17 @@
         ]
       },
       "Enviar email": {
+        "main": [
+          [
+            {
+              "node": "Firmar marcado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Firmar marcado": {
         "main": [
           [
             {

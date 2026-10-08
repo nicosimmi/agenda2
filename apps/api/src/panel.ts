@@ -433,31 +433,41 @@ export async function setBookingStatus(
   id: string,
   status: "cancelled" | "completed" | "no_show",
 ) {
-  const [row] = await db
-    .select({
-      status: bookings.status,
-      startsAt: bookings.startsAt,
-      expiresAt: bookings.expiresAt,
-      customerId: bookings.customerId,
-    })
-    .from(bookings)
-    .where(and(eq(bookings.id, id), eq(bookings.businessId, t.businessId)));
-  if (!row) throw notFound("Reserva");
-  // Una propuesta que nadie confirmó a tiempo nunca llegó a ser una reserva.
-  const lapsed = row.status === "pending" && row.expiresAt !== null && row.expiresAt <= new Date();
-  if (lapsed || (row.status !== "pending" && row.status !== "confirmed")) {
-    throw new AppError(409, "CONFLICT", "La reserva ya no admite cambios de estado");
-  }
-  if (status !== "cancelled" && row.startsAt > new Date()) {
-    throw new AppError(409, "CONFLICT", "La reserva todavía no ha empezado");
-  }
+  const blocked = () => new AppError(409, "CONFLICT", "La reserva ya no admite cambios de estado");
   await db.transaction(async (tx) => {
-    await tx
+    const [row] = await tx
+      .select({
+        status: bookings.status,
+        startsAt: bookings.startsAt,
+        expiresAt: bookings.expiresAt,
+        customerId: bookings.customerId,
+      })
+      .from(bookings)
+      .where(and(eq(bookings.id, id), eq(bookings.businessId, t.businessId)));
+    if (!row) throw notFound("Reserva");
+    // Una propuesta que nadie confirmó a tiempo nunca llegó a ser una reserva.
+    const lapsed =
+      row.status === "pending" && row.expiresAt !== null && row.expiresAt <= new Date();
+    if (lapsed || (row.status !== "pending" && row.status !== "confirmed")) throw blocked();
+    if (status !== "cancelled" && row.startsAt > new Date()) {
+      throw new AppError(409, "CONFLICT", "La reserva todavía no ha empezado");
+    }
+    // El UPDATE vuelve a comprobar el estado: dos cambios a la vez no se pisan ni avisan dos veces.
+    const updated = await tx
       .update(bookings)
       .set({ status, updatedAt: new Date() })
-      .where(and(eq(bookings.id, id), eq(bookings.businessId, t.businessId)));
-    // Solo se avisa a un cliente con cuenta: una reserva manual no tiene a quién escribir.
-    if (status === "cancelled" && row.customerId) {
+      .where(
+        and(
+          eq(bookings.id, id),
+          eq(bookings.businessId, t.businessId),
+          inArray(bookings.status, ["pending", "confirmed"]),
+        ),
+      )
+      .returning({ id: bookings.id });
+    if (!updated.length) throw blocked();
+    // Solo se avisa de una reserva confirmada de un cliente con cuenta: una manual no tiene a quién
+    // escribir y una propuesta sin confirmar nunca se avisó.
+    if (status === "cancelled" && row.customerId && row.status === "confirmed") {
       await enqueueBookingEvent(tx, "booking.cancelled", id, { cancelledBy: "business" });
     }
   });

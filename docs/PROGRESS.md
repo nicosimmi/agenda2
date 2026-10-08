@@ -1,7 +1,7 @@
 # PROGRESS
 
-**Última actualización:** 2026-10-07 · Claude Code (Sonnet 5.5)
-**Fase actual:** 7 — Automatizaciones (rama `fase-7/automatizaciones`) **Estado:** terminada, a falta de tu confirmación para el merge. Las Fases 3 a 6 están integradas y etiquetadas (`fase-3` a `fase-6`), solo en local: `origin/main` va por detrás.
+**Última actualización:** 2026-10-07 · Claude Code (Opus 5.5)
+**Fase actual:** 8 — Evals, pulido y publicación (rama `fase-8/evals-pulido`) **Estado:** evals hechas y revisión cruzada final corregida (F8-3); a falta de decidir los pendientes de abajo y del merge. Fases 0 a 7 integradas y etiquetadas, solo en local (`origin/main` va por detrás). Condición del desarrollador: **nada que cueste dinero ni use APIs de pago**.
 
 ## Hecho
 
@@ -16,6 +16,20 @@
   - Revisión cruzada (subagente sin contexto) hecha: sin hallazgos graves; corregidos 7 de 9, decisiones F2-1 a F2-9.
 - RLS aplazada (F2-5).
 
+## Hecho en la Fase 8
+
+- Evals (`evals/`): 51 casos en 9 categorías, runner por la ruta real del chat con comprobaciones de sistema y de modelo, `pnpm eval` con informe en `evals/REPORT.md`, y test de CI (`evals.test.ts`) con un modelo simulado crédulo y otro bueno. Resultado: sistema 228/228; modelo sin medir con un modelo real. Decisión F8-1.
+- Diagnosticado el fallo de `transports.test.ts`: el escudo web de Avast/AVG rompe el HTTP local (F8-2). No es un fallo del código.
+- Revisión cruzada final con subagente: sin hallazgos graves; 13 corregidos (F8-3), entre ellos avisos de propuestas sin confirmar, carreras al cancelar, HTTP fuera de la transacción del outbox, tipo de evento en n8n y payload vaciado al entregar.
+- Vídeo del asistente grabado con Playwright (en la carpeta Vídeos del desarrollador, fuera del repositorio).
+
+## Pendiente de la Fase 8 (a decidir con el desarrollador)
+
+- Verificación de email y restablecer contraseña (primer recorte del plan, WORKFLOW §10).
+- Despliegue con URL pública: casi cualquier hosting pide tarjeta; sin contratar nada solo se puede dejar preparado.
+- Publicar el servidor MCP en npm (opcional; necesita la cuenta del desarrollador).
+- Ejecutar `pnpm eval --provider=anthropic` cuando se quiera medir el modelo real (cuesta dinero).
+
 ## Hecho en la Fase 7
 
 - API: outbox (`outbox.ts`): cada reserva creada, confirmada desde una propuesta, movida o cancelada anota su evento en la misma transacción. Un temporizador de la API lo entrega a n8n con firma HMAC (`signing.ts`) y reintenta con espera creciente. Rutas `GET /internal/reminders` y `POST /internal/reminders/:id/sent` para n8n, autenticadas solo por la firma. Migración `0005` (`next_attempt_at`, `reminder_sent_at`). Decisiones F7-1 a F7-6.
@@ -25,7 +39,7 @@
 
 ## Problemas abiertos
 
-- `apps/mcp-server/src/transports.test.ts`: 2 tests del transporte HTTP fallan (`HTTPParserError: Invalid character in chunk size`) también en el árbol limpio de la Fase 6, así que no vienen de la Fase 7. Pendiente de investigar; con ellos, `pnpm test` da 361 de 363.
+- `apps/mcp-server/src/transports.test.ts`: 2 tests del transporte HTTP fallan en este equipo por el escudo web de Avast/AVG (F8-2). Excluyendo `127.0.0.1` del escudo deberían pasar; no se ha podido comprobar el CI porque las ramas no se suben desde la Fase 2.
 - La entrega a n8n no tiene test automático contra un n8n real (necesita Docker); los tests de la API usan un fetch falso y la integración se probó a mano.
 - Importar de nuevo un workflow desde `automation/` exige copiar los ficheros como root y reiniciar n8n (pasos en el README).
 

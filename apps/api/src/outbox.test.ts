@@ -7,6 +7,7 @@ import { buildApp } from "./app.ts";
 import { confirmProposal, proposeCustomerBooking } from "./booking.ts";
 import { newBookingCode } from "./db/booking-code.ts";
 import {
+  businessMembers,
   bookings,
   businesses,
   categories,
@@ -180,6 +181,88 @@ describe("eventos del outbox", () => {
   });
 });
 
+describe("qué cambios avisan", () => {
+  async function bookOne() {
+    const slot = (await freeSlots())[0]!;
+    const res = await post("/me/bookings", {
+      businessSlug: slug,
+      serviceId,
+      staffId: ana,
+      startsAt: slot.startsAt,
+    });
+    return res.json().id as string;
+  }
+
+  it("cancelar una propuesta sin confirmar no avisa (nunca se avisó de ella)", async () => {
+    const slot = (await freeSlots())[0]!;
+    const proposal = await proposeCustomerBooking(t.db, customer.user.id, {
+      businessSlug: slug,
+      serviceId,
+      staffId: ana,
+      startsAt: new Date(slot.startsAt),
+      notes: null,
+    });
+    expect((await post(`/me/bookings/${proposal.id}/cancel`)).statusCode).toBe(200);
+    expect(await events()).toHaveLength(0);
+  });
+
+  it("cancelar dos veces a la vez avisa una sola vez", async () => {
+    const id = await bookOne();
+    const codes = (
+      await Promise.all([post(`/me/bookings/${id}/cancel`), post(`/me/bookings/${id}/cancel`)])
+    ).map((r) => r.statusCode);
+    expect(codes.sort()).toEqual([200, 409]);
+    expect((await events()).filter((e) => e.type === "booking.cancelled")).toHaveLength(1);
+  });
+
+  it("el negocio cancela: avisa al cliente con cuenta, no en una reserva manual", async () => {
+    const owner = await userWithSession(t.db, "business_owner", "duena@negocio.test");
+    await t.db.insert(businessMembers).values({ userId: owner.user.id, businessId });
+    const byOwner = (url: string, payload: object) =>
+      t.app.inject({
+        method: "POST",
+        url,
+        cookies: owner.cookies,
+        headers: { origin: WEB_ORIGIN },
+        payload,
+      });
+    const id = await bookOne();
+    expect(
+      (await byOwner(`/business/bookings/${id}/status`, { status: "cancelled" })).statusCode,
+    ).toBe(200);
+    const [, cancelled] = await events();
+    expect(cancelled).toMatchObject({
+      type: "booking.cancelled",
+      payload: { cancelledBy: "business" },
+    });
+
+    const slot = (await freeSlots())[0]!;
+    const manual = await byOwner("/business/bookings", {
+      staffId: ana,
+      serviceId,
+      startsAt: slot.startsAt,
+      guestName: "Invitado",
+    });
+    expect(manual.statusCode, manual.body).toBe(201);
+    const manualId = manual.json().id as string;
+    expect(
+      (await byOwner(`/business/bookings/${manualId}/status`, { status: "cancelled" })).statusCode,
+    ).toBe(200);
+    expect(await events()).toHaveLength(2); // la creación y la cancelación de la primera
+  });
+
+  it("mover borra el recordatorio enviado: la hora nueva tiene el suyo", async () => {
+    const id = await bookOne();
+    await t.db.update(bookings).set({ reminderSentAt: new Date() }).where(eq(bookings.id, id));
+    const other = (await freeSlots()).at(-1)!;
+    expect(
+      (await post(`/me/bookings/${id}/reschedule`, { startsAt: other.startsAt })).statusCode,
+    ).toBe(200);
+    const [row] = await t.db.select().from(bookings).where(eq(bookings.id, id));
+    expect(row!.reminderSentAt).toBeNull();
+  });
+});
+
 describe("entrega a n8n", () => {
   async function queueOne() {
     const slot = (await freeSlots())[0]!;
@@ -206,7 +289,9 @@ describe("entrega a n8n", () => {
     expect(verifySignature(SECRET, headers, calls[0]!.init.body as string)).toBe(true);
     expect(JSON.parse(calls[0]!.init.body as string)).toMatchObject({ type: "booking.created" });
 
-    expect((await events())[0]!.deliveredAt).not.toBeNull();
+    const [delivered] = await events();
+    expect(delivered!.deliveredAt).not.toBeNull();
+    expect(delivered!.payload).toEqual({}); // sin datos personales una vez entregado
     expect(await dispatchDue(t.db, config)).toEqual({ delivered: 0, failed: 0 }); // no se repite
   });
 
@@ -225,6 +310,34 @@ describe("entrega a n8n", () => {
     await t.db.update(outboxEvents).set({ nextAttemptAt: new Date(Date.now() - 1000) });
     const up = (async () => new Response("ok")) as typeof globalThis.fetch;
     expect(await dispatchDue(t.db, { ...config, fetch: up })).toEqual({ delivered: 1, failed: 0 });
+  });
+
+  it("tras 8 intentos fallidos deja el evento sin entregar y no lo vuelve a intentar", async () => {
+    await queueOne();
+    await t.db.update(outboxEvents).set({ attempts: 8, nextAttemptAt: new Date(0) });
+    const up = (async () => new Response("ok")) as typeof globalThis.fetch;
+    const config = { baseUrl: "http://n8n.test/webhook", secret: SECRET, fetch: up };
+    expect(await dispatchDue(t.db, config)).toEqual({ delivered: 0, failed: 0 });
+    expect((await events())[0]!.deliveredAt).toBeNull();
+  });
+
+  it("n8n verifica con JSON.stringify del cuerpo interpretado: coincide aunque haya tildes, comillas y emojis", async () => {
+    const slot = (await freeSlots())[0]!;
+    await post("/me/bookings", {
+      businessSlug: slug,
+      serviceId,
+      staffId: ana,
+      startsAt: slot.startsAt,
+      notes: 'Alérgica al "látex" \\ niño 🙂   fin',
+    });
+    let body = "";
+    const capture = (async (_url: string, init: RequestInit) => {
+      body = init.body as string;
+      return new Response("ok");
+    }) as typeof globalThis.fetch;
+    await dispatchDue(t.db, { baseUrl: "http://n8n.test/webhook", secret: SECRET, fetch: capture });
+    expect(body).toContain("látex");
+    expect(JSON.stringify(JSON.parse(body))).toBe(body);
   });
 });
 
@@ -250,6 +363,7 @@ describe("recordatorios (/internal)", () => {
         status: "confirmed",
         source: "web",
         createdAt: new Date(Date.now() - createdDaysAgo * DAY_MS),
+        updatedAt: new Date(Date.now() - createdDaysAgo * DAY_MS),
       })
       .returning({ id: bookings.id });
     return row!.id;
@@ -268,6 +382,18 @@ describe("recordatorios (/internal)", () => {
     const app = await secured();
     expect((await app.inject({ url: "/internal/reminders" })).statusCode).toBe(401);
     expect((await app.inject(signed("GET", "/internal/reminders", "otro"))).statusCode).toBe(401);
+    // Una firma de otra ruta o de otro método no vale.
+    const id = "00000000-0000-4000-8000-000000000000";
+    const getSigned = signHeaders(SECRET, `GET /internal/reminders/${id}/sent\n`);
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: `/internal/reminders/${id}/sent`,
+          headers: getSigned,
+        })
+      ).statusCode,
+    ).toBe(401);
     // La app de test no tiene secreto: ni una firma hecha con el secreto de otra la deja pasar.
     const headers = signHeaders(SECRET, "GET /internal/reminders\n");
     expect((await t.app.inject({ url: "/internal/reminders", headers })).statusCode).toBe(401);
@@ -278,6 +404,8 @@ describe("recordatorios (/internal)", () => {
     const due = await booking(10, 2);
     await booking(30, 2); // empieza dentro de más de 24 h
     await booking(12, 0); // reservada hace un momento: ya recibió la confirmación
+    const moved = await booking(14, 2); // reservada hace días pero movida hace un momento
+    await t.db.update(bookings).set({ updatedAt: new Date() }).where(eq(bookings.id, moved));
     const cancelled = await booking(8, 2);
     await t.db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, cancelled));
 
