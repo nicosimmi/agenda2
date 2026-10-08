@@ -221,3 +221,5 @@ export interface Me {
   name: string;
   role: UserRole;
 }
+
+export * from "./demo-data.ts";
