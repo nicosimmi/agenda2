@@ -6,8 +6,8 @@ import { Link } from "react-router-dom";
 const Globe3D = lazy(() => import("@/components/ui/3d-globe"));
 
 const GLOBE = {
-  textureUrl: "/textures/earth-blue-marble.jpg",
-  bumpMapUrl: "/textures/earth-topology.png",
+  textureUrl: `${import.meta.env.BASE_URL}textures/earth-blue-marble.jpg`,
+  bumpMapUrl: `${import.meta.env.BASE_URL}textures/earth-topology.png`,
   atmosphereColor: "#c89b3c",
   autoRotateSpeed: 0.7,
   enableZoom: false,

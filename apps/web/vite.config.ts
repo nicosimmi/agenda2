@@ -6,6 +6,8 @@ import tailwindcss from "@tailwindcss/vite";
 // En desarrollo, el navegador habla solo con Vite (5173) y Vite reenvía a la API:
 // así la cookie de sesión es del mismo origen y no hace falta CORS.
 export default defineConfig({
+  // En GitHub Pages la web vive en /<repositorio>/ (VITE_BASE la pone el workflow).
+  base: process.env.VITE_BASE ?? "/",
   plugins: [react(), tailwindcss()],
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   server: {
