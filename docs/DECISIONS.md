@@ -401,3 +401,14 @@ Sin hallazgos graves. La excepción F7-3 (rutas `/internal` y despachador sin te
 11. **Retención (baja, RGPD).** El payload se vacía al entregarse el evento.
 
 **Sin cambiar:** cancelar y mover después del clic solo se prueban en los tests de la API, no en el runner de evals. El recordatorio con los cambios de este punto se ha importado y su código se ha validado, pero no se ha vuelto a ejecutar de punta a punta, porque la API de desarrollo estaba parada.
+
+## F8-4. Demo pública en GitHub Pages, sin servidor
+
+El desarrollador quiere una URL pública gratis con GitHub. Pages solo sirve ficheros estáticos, así que la demo publicada no usa la API, Postgres, n8n ni el MCP:
+
+- Con `VITE_DEMO=1`, `main.tsx` carga `demo/install.ts`, que intercepta los `fetch` a `/api/…` y los contesta `demo/server.ts` con los mismos formatos y códigos de error que la API. El resto de la web no cambia.
+- Los datos del seed se movieron a `packages/shared/src/demo-data.ts` para que los usen el seed de Postgres y la demo. Los huecos se calculan con `computeAvailability` de `packages/core` y los cuerpos se validan con los esquemas de `shared`.
+- El estado vive en `localStorage` (uno por visitante). Las contraseñas de las cuentas de prueba se comparan en claro: son datos ficticios que no salen del navegador.
+- El asistente sigue un guion fijo como `LLM_PROVIDER=demo`, con tarjeta y botón «Confirmar». Los tokens MCP responden que no hay servidor en la demo.
+- `VITE_BASE` pone la web bajo `/agenda2/`, el router usa esa base y `404.html` es una copia de `index.html` para que funcionen las URL profundas.
+- No es seguridad real: cualquiera puede leer o cambiar su propio `localStorage`. Da igual porque cada visitante solo ve su copia de datos ficticios.

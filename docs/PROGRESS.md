@@ -23,10 +23,14 @@
 - Revisión cruzada final con subagente: sin hallazgos graves; 13 corregidos (F8-3), entre ellos avisos de propuestas sin confirmar, carreras al cancelar, HTTP fuera de la transacción del outbox, tipo de evento en n8n y payload vaciado al entregar.
 - Vídeo del asistente grabado con Playwright (en la carpeta Vídeos del desarrollador, fuera del repositorio).
 
+## Publicación (2026-10-08)
+
+- Código subido a GitHub: `main`, ramas de las fases 3 a 8 y etiquetas `fase-3` a `fase-8`.
+- Demo pública en GitHub Pages (https://nicosimmi.github.io/agenda2/), sin servidor: F8-4. Probada en local con el mismo build (base `/agenda2/`) y Playwright: búsqueda, ficha, reserva con el asistente y Confirmar, recarga con la sesión y panel del negocio.
+
 ## Pendiente de la Fase 8 (a decidir con el desarrollador)
 
 - Verificación de email y restablecer contraseña (primer recorte del plan, WORKFLOW §10).
-- Despliegue con URL pública: casi cualquier hosting pide tarjeta; sin contratar nada solo se puede dejar preparado.
 - Publicar el servidor MCP en npm (opcional; necesita la cuenta del desarrollador).
 - Ejecutar `pnpm eval --provider=anthropic` cuando se quiera medir el modelo real (cuesta dinero).
 

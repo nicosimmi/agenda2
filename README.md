@@ -2,7 +2,17 @@
 
 Marketplace de reservas donde los negocios con citas (barberías, fisioterapia, pádel, estética…) se dan de alta y los clientes los buscan y reservan, bien con una interfaz clásica o con un **asistente de IA** que actúa mediante un **servidor MCP** propio. Proyecto de portfolio.
 
-> **Estado:** Fase 5 (servidor MCP). Consulta `docs/PROGRESS.md`.
+> **Estado:** las 8 fases del plan están terminadas. Consulta `docs/PROGRESS.md`.
+
+## Demo pública
+
+**https://nicosimmi.github.io/agenda2/**
+
+Funciona entera en el navegador: no hay servidor detrás. Las peticiones a la API las contesta `apps/web/src/demo`, con los mismos formatos y los datos ficticios del seed. Los huecos libres salen del mismo motor de `packages/core`, y los datos de entrada se validan con los mismos esquemas de `packages/shared`. Lo que haces se guarda en tu navegador (`localStorage`); para empezar de cero, borra los datos del sitio.
+
+Cuentas de prueba (contraseña `demo-1234`): `cliente@demo.agendia.test` para reservar, y `<negocio>@demo.agendia.test` (por ejemplo `barberia-el-califa@demo.agendia.test`) para el panel de un negocio.
+
+Diferencias con la instalación completa: el asistente es un guion fijo (no una IA), no hay servidor MCP ni emails, la búsqueda es por subcadena (no texto completo de Postgres) y cada visitante tiene su propia copia de los datos. Se publica sola con cada push a `main` (`.github/workflows/pages.yml`).
 
 ## Documentación
 
