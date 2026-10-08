@@ -197,7 +197,7 @@ export function Landing() {
           }
         >
           <img
-            src="/img/panel-agenda.png"
+            src={`${import.meta.env.BASE_URL}img/panel-agenda.png`}
             alt="Agenda del panel de AgendIA con las reservas del día"
             className="mx-auto h-full w-full rounded-2xl object-cover object-top"
             draggable={false}

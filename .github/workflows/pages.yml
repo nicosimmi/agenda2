@@ -1,0 +1,50 @@
+name: Demo en GitHub Pages
+
+# Publica la web como demo estática: sin servidor, la API la contesta el propio navegador
+# (apps/web/src/demo) con los datos ficticios del seed. Es gratis porque el repositorio es público.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @agendia/web exec vite build
+        env:
+          VITE_DEMO: "1"
+          VITE_BASE: /${{ github.event.repository.name }}/
+      # GitHub Pages no sabe de rutas de una SPA: una URL profunda (/n/negocio) sirve 404.html,
+      # que es la misma aplicación y resuelve la ruta en el navegador.
+      - run: cp apps/web/dist/index.html apps/web/dist/404.html
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: apps/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

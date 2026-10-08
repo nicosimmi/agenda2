@@ -43,6 +43,13 @@ export function Login() {
           <FormError message={error} />
           <SubmitButton busy={busy}>Entrar</SubmitButton>
         </form>
+        {import.meta.env.VITE_DEMO === "1" && (
+          <p className="text-muted text-sm">
+            Cuentas de prueba (contraseña <code>demo-1234</code>):{" "}
+            <code>cliente@demo.agendia.test</code> para reservar, o{" "}
+            <code>barberia-el-califa@demo.agendia.test</code> para ver el panel de un negocio.
+          </p>
+        )}
         <p className="text-muted text-sm">
           ¿Primera vez?{" "}
           <Link to={`/registro${next}`} className="text-gold-dark font-semibold underline">

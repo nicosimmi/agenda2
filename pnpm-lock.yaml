@@ -112,6 +112,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@agendia/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@agendia/shared':
         specifier: workspace:*
         version: link:../../packages/shared
