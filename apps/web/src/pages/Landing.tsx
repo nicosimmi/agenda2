@@ -199,7 +199,7 @@ export function Landing() {
           <img
             src={`${import.meta.env.BASE_URL}img/panel-agenda.png`}
             alt="Agenda del panel de AgendIA con las reservas del día"
-            className="mx-auto h-full w-full rounded-2xl object-cover object-top"
+            className="mx-auto block h-auto w-full rounded-2xl md:h-full md:object-cover md:object-top"
             draggable={false}
           />
         </ContainerScroll>
@@ -243,7 +243,7 @@ export function Landing() {
         <Faq items={FAQ.inicio!} />
       </Page>
 
-      <LampContainer className="min-h-[34rem] bg-ink">
+      <LampContainer className="-mb-24 min-h-[16rem] bg-ink md:min-h-[34rem]">
         <motion.div
           initial={{ opacity: 0.5, y: 80 }}
           whileInView={{ opacity: 1, y: 0 }}
