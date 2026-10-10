@@ -4,6 +4,7 @@
 // (`packages/core`) y los datos de entrada se validan con los mismos esquemas de `packages/shared`.
 // No hay servidor: nada sale del navegador, y el asistente es un guion fijo, no una IA.
 import { computeAvailability, localDate, DAY_MS } from "@agendia/core";
+import { uuid } from "../uuid.ts";
 import {
   DEMO_BUSINESSES,
   DEMO_CATEGORIES,
@@ -132,7 +133,6 @@ interface State {
 
 const STORAGE_KEY = "agendia-demo";
 const VERSION = 1;
-const uuid = () => crypto.randomUUID();
 
 function seedState(): State {
   const s: State = {

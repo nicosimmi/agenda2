@@ -1,3 +1,4 @@
+import { uuid } from "../uuid.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../api.ts";
 import { streamChat, type ChatErrorCode, type ChatEvent, type ProposalKind } from "./stream.ts";
@@ -30,7 +31,7 @@ const nextId = () => `m${++counter}`;
 
 /** Estado de un chat con el asistente: mensajes, streaming y botones de la propuesta. */
 export function useAgentChat(userId: string | undefined) {
-  const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
+  const [sessionId, setSessionId] = useState(() => uuid());
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const abort = useRef<AbortController | null>(null);
@@ -43,7 +44,7 @@ export function useAgentChat(userId: string | undefined) {
     abort.current?.abort();
     setMessages([]);
     setBusy(false);
-    setSessionId(crypto.randomUUID());
+    setSessionId(uuid());
   }, []);
 
   // Al entrar o salir de la cuenta el chat empieza de cero: una conversación no cambia de dueño.
