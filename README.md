@@ -1,26 +1,66 @@
 # AgendIA
 
-Marketplace de reservas donde los negocios con citas (barberías, fisioterapia, pádel, estética…) se dan de alta y los clientes los buscan y reservan, bien con una interfaz clásica o con un **asistente de IA** que actúa mediante un **servidor MCP** propio. Proyecto de portfolio.
+Plataforma de reservas para negocios con cita (barberías, fisioterapia, pádel, estética). Los negocios se dan de alta, y los clientes los buscan y reservan con una interfaz de toda la vida o hablando con un asistente de IA.
 
-> **Estado:** las 8 fases del plan están terminadas. Consulta `docs/PROGRESS.md`.
+**[Probar la demo](https://nicosimmi.github.io/agenda2/)**. Funciona entera en el navegador, sin servidor y sin registrarte.
 
-## Demo pública
+![Panel de agenda de un negocio](apps/web/public/img/panel-agenda.png)
 
-**https://nicosimmi.github.io/agenda2/**
+## Por qué lo hice
 
-Funciona entera en el navegador: no hay servidor detrás. Las peticiones a la API las contesta `apps/web/src/demo`, con los mismos formatos y los datos ficticios del seed. Los huecos libres salen del mismo motor de `packages/core`, y los datos de entrada se validan con los mismos esquemas de `packages/shared`. Lo que haces se guarda en tu navegador (`localStorage`); para empezar de cero, borra los datos del sitio.
+Quería resolver un problema concreto: cómo dejar que un modelo de lenguaje actúe sobre datos reales sin fiarse de él. Un asistente que reserva citas es un buen ejemplo, porque un error cuesta dinero y tiempo a alguien, y porque cualquier texto que escribe un negocio (su descripción, sus FAQ) puede intentar darle órdenes al modelo.
+
+La respuesta que construí no depende de que el modelo se porte bien. Lo que importa es lo que el sistema le deja hacer.
+
+## Lo más interesante
+
+- **El asistente propone, la persona confirma.** Al modelo solo se le exponen herramientas de lectura y de propuesta. Las de confirmación las ejecuta el servidor cuando el cliente pulsa el botón. Aunque el modelo se dejara manipular del todo, no podría reservar.
+- **Un servidor MCP propio** ([`apps/mcp-server`](apps/mcp-server)). Cualquier cliente compatible, como Claude Desktop, puede buscar y reservar con tokens que caducan, se revocan y llevan permisos separados (`read`, `propose`, `confirm`).
+- **Aislamiento entre negocios.** El `business_id` sale siempre de la sesión, nunca de lo que mande el cliente. Un test recorre una tabla con todas las rutas de la API y el CI falla si se añade una sin su prueba de aislamiento.
+- **Evaluaciones del asistente** ([`evals/`](evals)). 51 casos en español: reservas, fechas relativas, uso sin sesión, manipulación directa e inyección indirecta. Separan lo que garantiza la arquitectura (330 de 330 comprobaciones) de lo que depende del modelo, y se pueden ejecutar gratis con un modelo simulado.
+- **Emails fiables con n8n.** Cada reserva anota un evento en la misma transacción (patrón outbox), y un proceso lo entrega firmado con reintentos. Si n8n está caído, no se pierde nada.
+
+## Qué incluye
+
+| Parte             | Qué hay                                                               |
+| ----------------- | --------------------------------------------------------------------- |
+| `apps/web`        | React, Vite y Tailwind: buscador, reserva, cuenta del cliente y panel |
+| `apps/api`        | Fastify, Zod y Drizzle sobre PostgreSQL                               |
+| `apps/mcp-server` | Servidor MCP (stdio y HTTP)                                           |
+| `packages/core`   | Reglas de dominio puras, como el cálculo de huecos libres             |
+| `packages/shared` | Esquemas Zod y tipos compartidos por la web, la API y la demo         |
+| `automation/`     | Cuatro workflows de n8n (emails y recordatorio 24 h)                  |
+| `evals/`          | Dataset y runner de evaluación del asistente                          |
+
+Se despliega con Docker Compose (PostgreSQL, Mailpit y n8n) y el CI de GitHub Actions ejecuta typecheck, lint, tests de integración con Postgres real y pruebas de extremo a extremo con Playwright. Ningún test llama a un modelo real.
+
+## La demo pública
+
+Las peticiones a la API las contesta el propio navegador (`apps/web/src/demo`) con los datos ficticios del seed. Los huecos libres salen del mismo motor de `packages/core` y los datos de entrada se validan con los mismos esquemas de `packages/shared`. Lo que haces se guarda en tu navegador (`localStorage`); para empezar de cero, borra los datos del sitio.
 
 Cuentas de prueba (contraseña `demo-1234`): `cliente@demo.agendia.test` para reservar, y `<negocio>@demo.agendia.test` (por ejemplo `barberia-el-califa@demo.agendia.test`) para el panel de un negocio.
 
-Diferencias con la instalación completa: el asistente es un guion fijo (no una IA), no hay servidor MCP ni emails, la búsqueda es por subcadena (no texto completo de Postgres) y cada visitante tiene su propia copia de los datos. Se publica sola con cada push a `main` (`.github/workflows/pages.yml`).
+Diferencias con la instalación completa: el asistente sigue un guion fijo (no es una IA), no hay servidor MCP ni emails, la búsqueda es por subcadena en vez de texto completo de Postgres, y cada visitante tiene su propia copia de los datos. Se publica sola con cada push a `main` (`.github/workflows/pages.yml`).
+
+## Cómo lo trabajé
+
+Lo hice por fases (ocho, de la base de datos a las evaluaciones), con commits pequeños y un registro de decisiones técnicas con su motivo en [`docs/DECISIONS.md`](docs/DECISIONS.md). He usado Claude Code como ayudante, con reglas escritas en [`AGENTS.md`](AGENTS.md), y cada fase cerró con una revisión cruzada por un segundo agente sin contexto. El proyecto está hecho sin gastar en APIs: el asistente real está implementado, pero su tasa de acierto con un modelo de verdad no está medida, y el README lo dice más abajo.
 
 ## Documentación
 
-- [`docs/SPEC.md`](docs/SPEC.md) — qué se construye
-- [`docs/WORKFLOW.md`](docs/WORKFLOW.md) — cómo se trabaja
-- [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones técnicas
-- [`docs/PROGRESS.md`](docs/PROGRESS.md) — estado actual
-- [`AGENTS.md`](AGENTS.md) — reglas para agentes de código
+- [`docs/SPEC.md`](docs/SPEC.md): qué se construye
+- [`docs/WORKFLOW.md`](docs/WORKFLOW.md): cómo se trabaja
+- [`docs/DECISIONS.md`](docs/DECISIONS.md): decisiones técnicas
+- [`docs/PROGRESS.md`](docs/PROGRESS.md): estado actual
+- [`AGENTS.md`](AGENTS.md): reglas para agentes de código
+
+## Autor
+
+Nicolás Simón Milano · [github.com/nicosimmi](https://github.com/nicosimmi)
+
+---
+
+# Ejecutarlo en local
 
 ## Requisitos (Windows)
 
