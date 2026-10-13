@@ -2,6 +2,7 @@
 // Cerrar sesión borra la fila, así que la sesión se invalida al momento (con un JWT no se podría).
 import { createHash, randomBytes } from "node:crypto";
 import { and, eq, gt, lt } from "drizzle-orm";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Db } from "./db/client.ts";
 import { sessions, users } from "./db/schema.ts";
 
@@ -39,4 +40,24 @@ export async function deleteExpiredSessions(db: Db): Promise<void> {
 
 export async function deleteSession(db: Db, token: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.tokenHash, hashToken(token)));
+}
+
+/** Abre la sesión del usuario y la guarda en la cookie. La que trajera la petición deja de valer (rotación). */
+export async function startSession(
+  db: Db,
+  secure: boolean,
+  req: FastifyRequest,
+  reply: FastifyReply,
+  userId: string,
+): Promise<void> {
+  const previous = req.cookies[SESSION_COOKIE];
+  if (previous) await deleteSession(db, previous);
+  const token = await createSession(db, userId);
+  reply.setCookie(SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure,
+    path: "/",
+    maxAge: SESSION_TTL_MS / 1000,
+  });
 }

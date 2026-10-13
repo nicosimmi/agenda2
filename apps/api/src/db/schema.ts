@@ -52,6 +52,8 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   phone: text("phone"),
   emailVerifiedAt: instant("email_verified_at"),
+  // Identificador estable de la cuenta de Google (claim `sub`); el email puede cambiar, este no.
+  googleSub: text("google_sub").unique(),
   createdAt: createdAt(),
 });
 

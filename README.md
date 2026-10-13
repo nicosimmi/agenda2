@@ -165,6 +165,10 @@ Para probarlo:
 
 Sin token solo hay lectura pública. Un token caduca (1 hora por defecto) y se puede revocar; nunca puede crear otros tokens. El texto que escriben los negocios llega marcado como `<dato_no_confiable>` para que el modelo no lo trate como instrucciones. Limitación conocida: un cliente con un token de «acceso completo» también ve las herramientas `confirm_*`.
 
+## Acceso con Google
+
+Opcional y gratis. Crea un «ID de cliente de OAuth» (aplicación web) en la [consola de Google Cloud](https://console.cloud.google.com/apis/credentials), añade como URI de redireccionamiento `http://localhost:5173/api/auth/google/callback` y pon en `.env` `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `GOOGLE_REDIRECT_URI`. Al reiniciar la API aparece «Continuar con Google» en `/entrar`. Solo sirve para clientes. Las decisiones de diseño están en [DECISIONS F9-1](docs/DECISIONS.md) y el estado de la seguridad en [`docs/SECURITY.md`](docs/SECURITY.md). La demo de GitHub Pages no lo incluye porque no tiene servidor.
+
 ## Asistente de IA
 
 La web incluye un chat (botón «Asistente», abajo a la derecha) que busca negocios, mira huecos y **prepara** una reserva, una cancelación o un cambio de hora. No la hace: la tarjeta que aparece tiene un botón «Confirmar» y solo ese clic ejecuta la acción. Está en `apps/api/src/agent`.

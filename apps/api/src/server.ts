@@ -10,12 +10,25 @@ const list = (value = "") =>
     .filter(Boolean);
 
 const { db } = createDb();
+const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } = process.env;
+if (Boolean(GOOGLE_CLIENT_ID) !== Boolean(GOOGLE_CLIENT_SECRET && GOOGLE_REDIRECT_URI)) {
+  throw new Error(
+    "El acceso con Google necesita GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET y GOOGLE_REDIRECT_URI",
+  );
+}
 const app = await buildApp(db, {
   webOrigins: list(process.env.WEB_ORIGIN ?? "http://localhost:5173"),
   trustedProxies: list(process.env.TRUSTED_PROXIES),
   secureCookies: process.env.NODE_ENV === "production",
   agent: agentConfigFromEnv(process.env),
   automationSecret: process.env.AUTOMATION_SECRET,
+  google: GOOGLE_CLIENT_ID
+    ? {
+        clientId: GOOGLE_CLIENT_ID,
+        clientSecret: GOOGLE_CLIENT_SECRET!,
+        redirectUri: GOOGLE_REDIRECT_URI!,
+      }
+    : undefined,
 });
 
 // Entrega de avisos a n8n. Sin N8N_WEBHOOK_BASE no se entrega nada: los eventos se acumulan en

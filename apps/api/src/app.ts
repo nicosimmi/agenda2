@@ -12,6 +12,7 @@ import { createAgentService, DEFAULT_AGENT_CONFIG, type AgentConfig } from "./ag
 import { adminRoutes } from "./routes/admin.ts";
 import { agentActionRoutes, agentPublicRoutes } from "./routes/agent.ts";
 import { authRoutes } from "./routes/auth.ts";
+import { googleRoutes, type GoogleConfig } from "./routes/google.ts";
 import { businessRoutes } from "./routes/business.ts";
 import { customerRoutes } from "./routes/customer.ts";
 import { internalRoutes } from "./routes/internal.ts";
@@ -51,6 +52,8 @@ export interface AppConfig {
   agent?: Partial<AgentConfig>;
   /** Secreto HMAC compartido con n8n (SPEC §12); sin él, las rutas /internal rechazan todo. */
   automationSecret?: string | undefined;
+  /** Acceso con Google (OpenID Connect); sin él, el botón no aparece y las rutas responden 404. */
+  google?: GoogleConfig | undefined;
 }
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -141,6 +144,7 @@ export async function buildApp(db: Db, config: AppConfig) {
   await app.register(publicRoutes, { prefix: "/public" });
   await app.register(agentPublicRoutes, { prefix: "/public/chat", service: agent });
   await app.register(authRoutes, { prefix: "/auth" });
+  await app.register(googleRoutes, { prefix: "/auth/google" });
   await app.register(customerRoutes, { prefix: "/me" });
   await app.register(tokenRoutes, { prefix: "/me/tokens" });
   await app.register(agentActionRoutes, { prefix: "/me/agent", service: agent });

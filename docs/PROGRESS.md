@@ -16,6 +16,11 @@
   - Revisión cruzada (subagente sin contexto) hecha: sin hallazgos graves; corregidos 7 de 9, decisiones F2-1 a F2-9.
 - RLS aplazada (F2-5).
 
+## Después de la Fase 8 (2026-10-13)
+
+- Acceso con Google (DECISIONS F9-1): rutas `/auth/google/*`, columna `users.google_sub` (migración 0006), botón en `/entrar`, 18 tests con un Google simulado. Para activarlo hacen falta credenciales de OAuth del desarrollador (gratis); sin ellas todo sigue igual.
+- Revisión de seguridad en [`docs/SECURITY.md`](SECURITY.md): sin vulnerabilidades en dependencias ni secretos en el historial; riesgos pendientes: verificar email y restablecer contraseña.
+
 ## Hecho en la Fase 8
 
 - Evals (`evals/`): 51 casos en 9 categorías, runner por la ruta real del chat con comprobaciones de sistema y de modelo, `pnpm eval` con informe en `evals/REPORT.md`, y test de CI (`evals.test.ts`) con un modelo simulado crédulo y otro bueno. Resultado: sistema 228/228; modelo sin medir con un modelo real. Decisión F8-1.

@@ -645,6 +645,7 @@ route("POST", "/auth/logout", () => {
   db.sessionUserId = null;
   return [204, null];
 });
+route("GET", "/auth/providers", () => ({ google: false })); // la demo no habla con Google
 route("GET", "/auth/me", () => publicMe(me()));
 
 // Cliente

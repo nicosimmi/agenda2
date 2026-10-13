@@ -70,6 +70,9 @@ const ROUTES: Record<string, RouteSpec> = {
   "POST /auth/register": { access: "public" },
   "POST /auth/login": { access: "public" },
   "POST /auth/logout": { access: "public" },
+  "GET /auth/providers": { access: "public" },
+  "GET /auth/google/start": { access: "public" },
+  "GET /auth/google/callback": { access: "public" },
   "GET /auth/me": {
     access: "authenticated",
     isolation: async (f) => {

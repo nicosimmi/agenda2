@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import type { Me } from "@agendia/shared";
 import { api } from "../api.ts";
@@ -7,11 +7,20 @@ import { Faq } from "../components/Faq.tsx";
 import { FAQ } from "../faqs.ts";
 import { Card, Field, FormError, Page, SubmitButton, useAction } from "../ui.tsx";
 
+const GOOGLE_ERROR =
+  "No hemos podido entrar con Google. Inténtalo de nuevo o usa tu email y contraseña.";
+
 export function Login() {
   const { me, setMe } = useAuth();
   const [params] = useSearchParams();
   const volver = params.get("volver");
   const { error, busy, run } = useAction();
+  const [google, setGoogle] = useState(false);
+  useEffect(() => {
+    api<{ google: boolean }>("/auth/providers")
+      .then((p) => setGoogle(p.google))
+      .catch(() => setGoogle(false)); // sin servidor, el acceso con email sigue funcionando
+  }, []);
   if (me) return <Navigate to={homeFor(me, volver)} replace />;
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -40,9 +49,17 @@ export function Login() {
             autoComplete="current-password"
             required
           />
-          <FormError message={error} />
+          <FormError message={error ?? (params.get("error") === "google" ? GOOGLE_ERROR : null)} />
           <SubmitButton busy={busy}>Entrar</SubmitButton>
         </form>
+        {google && (
+          <a
+            href={`/api/auth/google/start${volver ? `?volver=${encodeURIComponent(volver)}` : ""}`}
+            className="border-line hover:border-fg text-fg block rounded-md border px-4 py-2 text-center font-semibold transition-colors"
+          >
+            Continuar con Google
+          </a>
+        )}
         {import.meta.env.VITE_DEMO === "1" && (
           <p className="text-muted text-sm">
             Cuentas de prueba (contraseña <code>demo-1234</code>):{" "}

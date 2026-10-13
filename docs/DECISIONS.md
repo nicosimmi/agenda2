@@ -412,3 +412,19 @@ El desarrollador quiere una URL pública gratis con GitHub. Pages solo sirve fic
 - El asistente sigue un guion fijo como `LLM_PROVIDER=demo`, con tarjeta y botón «Confirmar». Los tokens MCP responden que no hay servidor en la demo.
 - `VITE_BASE` pone la web bajo `/agenda2/`, el router usa esa base y `404.html` es una copia de `index.html` para que funcionen las URL profundas.
 - No es seguridad real: cualquiera puede leer o cambiar su propio `localStorage`. Da igual porque cada visitante solo ve su copia de datos ficticios.
+
+## F9-1. Acceso con Google (OpenID Connect)
+
+El desarrollador quiere poder entrar también con Google. Es gratis (el ID de cliente de OAuth no cuesta nada) y no añade dependencias:
+
+1. **Flujo de código con PKCE, en el servidor.** `GET /auth/google/start` guarda `state`, `nonce` y el verificador PKCE en una cookie `oauth` HttpOnly de 10 minutos y redirige a Google. `GET /auth/google/callback` comprueba el `state` contra esa cookie, canjea el código con el secreto del cliente y abre la sesión de siempre (cookie `sid`).
+2. **Validación del ID token.** Llega directamente del endpoint de Google por HTTPS, así que no se verifica la firma (OpenID Connect Core §3.1.3.7), pero sí emisor, destinatario, caducidad, `nonce` y `email_verified`. Un token sin email verificado se rechaza.
+3. **Solo clientes.** Una cuenta de negocio o de administración no se abre ni se reclama con Google: el alta de negocio exige categoría y sigue siendo por email.
+4. **Pre-secuestro de cuenta.** El registro por email no verifica el correo, así que alguien podría crear una cuenta con el email de otra persona y conocer su clave. Si esa persona entra después con Google, se reclama la cuenta: se invalida la contraseña (queda un hash aleatorio) y se borran sus sesiones. Quien se registró con contraseña y luego usa Google deja de poder entrar con la contraseña. Es un coste aceptado frente a dejar una puerta abierta.
+5. **Identidad por `sub`**, no por email: la columna `users.google_sub` es única, y el email puede cambiar.
+6. **Opcional.** Sin `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `GOOGLE_REDIRECT_URI`, `GET /auth/providers` devuelve `{ google: false }`, el botón no aparece y las rutas dan 404. La demo de GitHub Pages no puede hacer OAuth (no hay servidor): no muestra el botón.
+7. **Errores sin detalle.** Cualquier fallo vuelve a `/entrar?error=google` con un aviso genérico, y el destino `volver` solo admite rutas internas (no `//otra.web` ni URLs externas).
+
+Tests: `apps/api/src/google.test.ts`, con un Google simulado (ningún test llama a Google).
+
+**Revisión cruzada (subagente sin contexto).** Corregido: una cuenta ya vinculada a otro `sub` de Google no se reclama (email reciclado), el `UPDATE` exige `google_sub IS NULL`, los logs no guardan el error completo y los tests comprueban que la clave antigua deja de valer. Aceptado: la cookie `oauth` no va firmada (el riesgo es el login-CSRF por «cookie tossing» desde un subdominio hermano; la API se sirve en el mismo host que la web, sin subdominios compartidos), y el ID token no se verifica con JWKS porque se recibe directo de Google por HTTPS.
