@@ -2,7 +2,7 @@
 import { hash } from "@node-rs/argon2";
 import type { UserRole } from "@agendia/shared";
 import type pg from "pg";
-import { buildApp, type App } from "./app.ts";
+import { buildApp, type App, type AppConfig } from "./app.ts";
 import { createDb, type Db } from "./db/client.ts";
 import { users } from "./db/schema.ts";
 import { SESSION_COOKIE, createSession } from "./session.ts";
@@ -19,12 +19,13 @@ export interface TestContext {
   close: () => Promise<void>;
 }
 
-export async function createTestApp(): Promise<TestContext> {
+export async function createTestApp(extra: Partial<AppConfig> = {}): Promise<TestContext> {
   const { db, pool } = createDb(await prepareTestDatabase());
   const app = await buildApp(db, {
     webOrigins: [WEB_ORIGIN],
     secureCookies: false,
     trustedProxies: [],
+    ...extra,
   });
   await app.ready();
   return {

@@ -9,10 +9,9 @@ import { AppError, pgConstraint, pgErrorCode } from "../errors.ts";
 import { requireRole, userOf } from "../guards.ts";
 import {
   SESSION_COOKIE,
-  SESSION_TTL_MS,
-  createSession,
   deleteExpiredSessions,
   deleteSession,
+  startSession as openSession,
 } from "../session.ts";
 
 // Si el email no existe se verifica igualmente contra este hash, para que el tiempo de
@@ -44,19 +43,8 @@ export async function authRoutes(app: FastifyInstance) {
     keyGenerator: (req) => `login:${loginSchema.safeParse(req.body).data?.email ?? ""}`,
   });
 
-  async function startSession(req: FastifyRequest, reply: FastifyReply, userId: string) {
-    // Rotación: la sesión que trajera la petición deja de valer al abrir una nueva.
-    const previous = req.cookies[SESSION_COOKIE];
-    if (previous) await deleteSession(db, previous);
-    const token = await createSession(db, userId);
-    reply.setCookie(SESSION_COOKIE, token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: config.secureCookies,
-      path: "/",
-      maxAge: SESSION_TTL_MS / 1000,
-    });
-  }
+  const startSession = (req: FastifyRequest, reply: FastifyReply, userId: string) =>
+    openSession(db, config.secureCookies, req, reply, userId);
 
   app.post(
     "/register",
@@ -144,6 +132,9 @@ export async function authRoutes(app: FastifyInstance) {
     reply.clearCookie(SESSION_COOKIE, { path: "/" });
     return reply.status(204).send();
   });
+
+  // La web decide con esto si enseña el botón «Continuar con Google».
+  app.get("/providers", async () => ({ google: Boolean(config.google) }));
 
   app.get("/me", { preHandler: requireRole() }, async (req) => userOf(req) satisfies Me);
 }
