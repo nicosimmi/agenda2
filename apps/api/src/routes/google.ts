@@ -6,7 +6,7 @@
 // permite no verificar la firma en ese caso), pero se comprueban emisor, destinatario, caducidad,
 // nonce y que Google haya verificado el email.
 import { createHash, randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { hash } from "@node-rs/argon2";
 import { z } from "zod";
@@ -122,7 +122,11 @@ export async function googleRoutes(app: FastifyInstance) {
       const payload = id_token.split(".")[1] ?? "";
       claims = idTokenSchema.parse(JSON.parse(Buffer.from(payload, "base64url").toString()));
     } catch (error) {
-      req.log.warn({ err: error }, "Fallo al canjear el código de Google");
+      // Sin el error completo: un id_token mal formado podría dejar email y sub en los logs.
+      req.log.warn(
+        { kind: error instanceof Error ? error.name : "desconocido" },
+        "Fallo al canjear el código de Google",
+      );
       return failed(reply);
     }
     if (
@@ -165,6 +169,8 @@ export async function googleRoutes(app: FastifyInstance) {
     const [existing] = await db.select().from(users).where(eq(users.email, email));
     if (existing) {
       if (existing.role !== "customer") throw new AppError(403, "FORBIDDEN", "Cuenta no permitida");
+      // Ya vinculada a otra cuenta de Google (por ejemplo, un email reciclado): no se pisa.
+      if (existing.googleSub) throw new AppError(403, "FORBIDDEN", "Cuenta no permitida");
       await db.transaction(async (tx) => {
         await tx
           .update(users)
@@ -173,7 +179,7 @@ export async function googleRoutes(app: FastifyInstance) {
             emailVerifiedAt: new Date(),
             passwordHash: await unusablePassword(),
           })
-          .where(eq(users.id, existing.id));
+          .where(and(eq(users.id, existing.id), isNull(users.googleSub)));
         await tx.delete(sessions).where(eq(sessions.userId, existing.id));
       });
       return existing.id;

@@ -426,3 +426,5 @@ El desarrollador quiere poder entrar también con Google. Es gratis (el ID de cl
 7. **Errores sin detalle.** Cualquier fallo vuelve a `/entrar?error=google` con un aviso genérico, y el destino `volver` solo admite rutas internas (no `//otra.web` ni URLs externas).
 
 Tests: `apps/api/src/google.test.ts`, con un Google simulado (ningún test llama a Google).
+
+**Revisión cruzada (subagente sin contexto).** Corregido: una cuenta ya vinculada a otro `sub` de Google no se reclama (email reciclado), el `UPDATE` exige `google_sub IS NULL`, los logs no guardan el error completo y los tests comprueban que la clave antigua deja de valer. Aceptado: la cookie `oauth` no va firmada (el riesgo es el login-CSRF por «cookie tossing» desde un subdominio hermano; la API se sirve en el mismo host que la web, sin subdominios compartidos), y el ID token no se verifica con JWKS porque se recibe directo de Google por HTTPS.

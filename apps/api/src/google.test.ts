@@ -3,7 +3,13 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { sessions, users } from "./db/schema.ts";
 import { SESSION_COOKIE } from "./session.ts";
-import { createTestApp, userWithSession, WEB_ORIGIN, type TestContext } from "./test-app.ts";
+import {
+  createTestApp,
+  PASSWORD,
+  userWithSession,
+  WEB_ORIGIN,
+  type TestContext,
+} from "./test-app.ts";
 
 const CLIENT_ID = "cliente-de-test.apps.googleusercontent.com";
 let t: TestContext;
@@ -169,6 +175,14 @@ describe("retorno de Google", () => {
     expect(all).toHaveLength(1);
     expect(all[0]!.googleSub).toBe("google-sub-1");
     expect(all[0]!.passwordHash).not.toBe(user.passwordHash);
+    const old = await t.app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { email: "ana@gmail.com", password: PASSWORD },
+      headers: { origin: WEB_ORIGIN },
+      remoteAddress: freshIp(),
+    });
+    expect(old.statusCode).toBe(401);
     // Solo queda la sesión nueva, la del "otro" (quien creara la cuenta antes) ya no vale.
     const left = await t.db.select().from(sessions).where(eq(sessions.userId, user.id));
     expect(left).toHaveLength(1);
@@ -183,6 +197,18 @@ describe("retorno de Google", () => {
     const res = await callback(s2);
     expect(sessionOf(res)).toBeDefined();
     expect(await t.db.select().from(users)).toHaveLength(1);
+  });
+
+  it("no pisa una cuenta ya vinculada a otra cuenta de Google con el mismo email", async () => {
+    const s1 = await start();
+    goodClaims(s1);
+    await callback(s1);
+    const s2 = await start();
+    goodClaims(s2, { sub: "google-sub-2" });
+    const res = await callback(s2);
+    expect(res.headers.location).toBe(failedLocation);
+    const [u] = await t.db.select().from(users);
+    expect(u!.googleSub).toBe("google-sub-1");
   });
 
   it.each([
