@@ -120,4 +120,4 @@
 
 ## Para quien continúe (Claude o Codex)
 
-Lee AGENTS.md, docs/SPEC.md y este archivo. No cambies decisiones de DECISIONS.md sin avisar.
+Lee docs/SPEC.md y este archivo. No cambies decisiones de DECISIONS.md sin avisar.

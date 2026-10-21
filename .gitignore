@@ -20,3 +20,9 @@ docs/INTERVIEW_NOTES.md
 
 test-results/
 playwright-report/
+
+# Instrucciones para agentes de código y proceso de trabajo (solo en local)
+AGENTS.md
+CLAUDE.md
+docs/WORKFLOW.md
+docs/PROMPT_INICIAL.md

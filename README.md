@@ -44,15 +44,13 @@ Diferencias con la instalación completa: el asistente sigue un guion fijo (no e
 
 ## Cómo lo trabajé
 
-Lo hice por fases (ocho, de la base de datos a las evaluaciones), con commits pequeños y un registro de decisiones técnicas con su motivo en [`docs/DECISIONS.md`](docs/DECISIONS.md). He usado Claude Code como ayudante, con reglas escritas en [`AGENTS.md`](AGENTS.md), y cada fase cerró con una revisión cruzada por un segundo agente sin contexto. El proyecto está hecho sin gastar en APIs: el asistente real está implementado, pero su tasa de acierto con un modelo de verdad no está medida, y el README lo dice más abajo.
+Lo hice por fases (ocho, de la base de datos a las evaluaciones), con commits pequeños y un registro de decisiones técnicas con su motivo en [`docs/DECISIONS.md`](docs/DECISIONS.md). He usado Claude Code como ayudante, y cada fase cerró con una revisión cruzada por un segundo agente sin contexto. El proyecto está hecho sin gastar en APIs: el asistente real está implementado, pero su tasa de acierto con un modelo de verdad no está medida, y el README lo dice más abajo.
 
 ## Documentación
 
 - [`docs/SPEC.md`](docs/SPEC.md): qué se construye
-- [`docs/WORKFLOW.md`](docs/WORKFLOW.md): cómo se trabaja
 - [`docs/DECISIONS.md`](docs/DECISIONS.md): decisiones técnicas
 - [`docs/PROGRESS.md`](docs/PROGRESS.md): estado actual
-- [`AGENTS.md`](AGENTS.md): reglas para agentes de código
 
 ## Autor
 
