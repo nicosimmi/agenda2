@@ -56,7 +56,7 @@ Lo hice por fases (ocho, de la base de datos a las evaluaciones), con commits pe
 
 ## Autor
 
-Nicolás Simón Milano · [github.com/nicosimmi](https://github.com/nicosimmi)
+Nicolás Simón Milano · [LinkedIn](https://www.linkedin.com/in/nicolas-simon-milano/) · [GitHub](https://github.com/nicosimmi)
 
 ---
 
