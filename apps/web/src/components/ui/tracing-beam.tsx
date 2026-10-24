@@ -14,7 +14,7 @@ export const TracingBeam = ({
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
-    offset: ["start start", "end start"],
+    offset: ["start center", "end center"],
   });
 
   const contentRef = useRef<HTMLDivElement>(null);
@@ -26,11 +26,11 @@ export const TracingBeam = ({
     }
   }, []);
 
-  const y1 = useSpring(useTransform(scrollYProgress, [0, 0.8], [50, svgHeight]), {
+  const y1 = useSpring(useTransform(scrollYProgress, [0, 1], [50, svgHeight]), {
     stiffness: 500,
     damping: 90,
   });
-  const y2 = useSpring(useTransform(scrollYProgress, [0, 1], [50, svgHeight - 200]), {
+  const y2 = useSpring(useTransform(scrollYProgress, [0, 1], [50, svgHeight - 250]), {
     stiffness: 500,
     damping: 90,
   });

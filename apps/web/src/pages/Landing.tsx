@@ -220,7 +220,7 @@ export function Landing() {
             <h2 className="mb-12 text-4xl font-bold">Así empieza tu negocio</h2>
           </Reveal>
           <TracingBeam className="px-6">
-            <ol className="space-y-24">
+            <ol className="space-y-24 max-md:pl-6">
               {STEPS.map(([title, text], i) => (
                 <li key={title}>
                   <span className="bg-ink text-gold mb-4 inline-flex size-10 items-center justify-center rounded-full text-lg font-bold">
@@ -248,9 +248,9 @@ export function Landing() {
           initial={{ opacity: 0.5, y: 80 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.8, ease: "easeInOut" }}
-          className="text-center"
+          className="text-center max-md:pt-28"
         >
-          <h2 className="bg-gradient-to-br from-stone-100 to-stone-400 bg-clip-text pb-4 text-4xl leading-tight font-bold text-transparent md:text-6xl">
+          <h2 className="pb-4 text-4xl leading-tight font-bold text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] md:text-6xl">
             ¿Listo para abrir tu agenda?
           </h2>
           <Link

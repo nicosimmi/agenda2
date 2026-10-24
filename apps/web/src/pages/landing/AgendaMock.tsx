@@ -58,21 +58,18 @@ export function AgendaMock() {
               <span className="text-muted text-sm">{who}</span>
             </motion.li>
           ))}
-          <AnimatePresence>
-            {booked && (
-              <motion.li
-                initial={{ opacity: 0, scale: 0.9, height: 0 }}
-                animate={{ opacity: 1, scale: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ type: "spring", stiffness: 260, damping: 22 }}
-                className="bg-gold flex items-center gap-4 rounded-lg px-4 py-3 shadow-lg shadow-amber-600/30"
-              >
-                <span className="font-bold">17:30</span>
-                <span className="flex-1">Corte clásico</span>
-                <span className="text-sm font-bold">✓ Confirmada</span>
-              </motion.li>
-            )}
-          </AnimatePresence>
+          {/* Siempre ocupa su hueco: así la altura de la tarjeta no cambia y la página no salta. */}
+          <motion.li
+            initial={false}
+            animate={{ opacity: booked ? 1 : 0, scale: booked ? 1 : 0.9 }}
+            transition={{ type: "spring", stiffness: 260, damping: 22 }}
+            aria-hidden={!booked}
+            className="bg-gold flex items-center gap-4 rounded-lg px-4 py-3 shadow-lg shadow-amber-600/30"
+          >
+            <span className="font-bold">17:30</span>
+            <span className="flex-1">Corte clásico</span>
+            <span className="text-sm font-bold">✓ Confirmada</span>
+          </motion.li>
         </ul>
 
         <div className="mt-5 flex min-h-[6.5rem] flex-col justify-end gap-2 text-sm">

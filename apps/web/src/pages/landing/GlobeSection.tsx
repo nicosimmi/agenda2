@@ -32,7 +32,7 @@ export function GlobeSection() {
           </h2>
           <p className="mt-5 max-w-md text-stone-300">
             Cada negocio configura sus servicios y su equipo, y sus clientes reservan desde
-            cualquier sitio. Arrastra el globo y míralo girar.
+            cualquier sitio.
           </p>
           <Link
             to="/alta"
