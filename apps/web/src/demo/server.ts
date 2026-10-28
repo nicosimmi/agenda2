@@ -19,6 +19,8 @@ import {
   customerBookingSchema,
   loginSchema,
   manualBookingSchema,
+  mediaUploadSchema,
+  MAX_GALLERY_PHOTOS,
   registerSchema,
   rescheduleSchema,
   searchQuerySchema,
@@ -105,6 +107,13 @@ interface Booking {
   notes: string | null;
   expiresAt: string | null;
 }
+interface Media {
+  id: string;
+  businessId: string;
+  staffId: string | null;
+  /** data URL: en la demo la imagen vive en el navegador, como el resto de datos. */
+  src: string;
+}
 interface Faq {
   id: string;
   businessId: string;
@@ -129,6 +138,7 @@ interface State {
   timeOff: TimeOff[];
   bookings: Booking[];
   faq: Faq[];
+  media: Media[];
   agentEvents: AgentEvent[];
   sessionUserId: string | null;
 }
@@ -155,6 +165,7 @@ function seedState(): State {
     timeOff: [],
     bookings: [],
     faq: [],
+    media: [],
     agentEvents: [],
     sessionUserId: null,
   };
@@ -222,7 +233,10 @@ function seedState(): State {
 function load(): State {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null") as State | null;
-    if (saved?.version === VERSION) return saved;
+    if (saved?.version === VERSION) {
+      saved.media ??= []; // datos guardados antes de que existieran las fotos
+      return saved;
+    }
   } catch {
     // datos corruptos o almacenamiento bloqueado: se empieza de cero
   }
@@ -554,6 +568,8 @@ route("GET", "/public/businesses/:slug", (p) => {
       id: m.id,
       name: m.name,
       serviceIds: m.serviceIds.filter((id) => active.has(id)),
+      photoId: db.media.find((p) => p.staffId === m.id)?.id ?? null,
+      photoSrc: db.media.find((p) => p.staffId === m.id)?.src ?? null,
     }))
     .filter((m) => m.serviceIds.length > 0);
   const visible = new Set(staff.map((m) => m.id));
@@ -585,6 +601,9 @@ route("GET", "/public/businesses/:slug", (p) => {
     faq: db.faq
       .filter((f) => f.businessId === b.id)
       .map(({ id, question, answer }) => ({ id, question, answer })),
+    photos: db.media
+      .filter((p) => p.businessId === b.id && p.staffId === null)
+      .map(({ id, src }) => ({ id, src })),
   };
 });
 route("GET", "/public/businesses/:slug/availability", (p, q) => {
@@ -815,7 +834,43 @@ route("DELETE", "/business/staff/:id", (p) => {
   }
   db.staff = db.staff.filter((x) => x.id !== m.id);
   db.hours = db.hours.filter((h) => h.staffId !== m.id);
+  db.media = db.media.filter((p) => p.staffId !== m.id);
   return { id: m.id, archived: false };
+});
+// Fotos (galería del negocio y una por profesional)
+route("GET", "/business/media", () => {
+  const b = ownBusiness();
+  return db.media
+    .filter((p) => p.businessId === b.id)
+    .map(({ id, staffId, src }) => ({ id, staffId, src }));
+});
+route("POST", "/business/media", (_, __, body) => {
+  const b = ownBusiness();
+  const input = mediaUploadSchema.parse(body);
+  if (input.staffId) {
+    const member = ownStaff(input.staffId);
+    // Una foto por profesional: la nueva sustituye a la anterior.
+    db.media = db.media.filter((p) => p.staffId !== member.id);
+  } else if (
+    db.media.filter((p) => p.businessId === b.id && p.staffId === null).length >= MAX_GALLERY_PHOTOS
+  ) {
+    throw conflict(`Máximo ${MAX_GALLERY_PHOTOS} fotos en la galería`);
+  }
+  const photo: Media = {
+    id: uuid(),
+    businessId: b.id,
+    staffId: input.staffId ?? null,
+    src: input.image,
+  };
+  db.media.push(photo);
+  return [201, { id: photo.id, staffId: photo.staffId, src: photo.src }];
+});
+route("DELETE", "/business/media/:id", (p) => {
+  const b = ownBusiness();
+  const photo = db.media.find((x) => x.id === p.id && x.businessId === b.id);
+  if (!photo) throw notFound("Foto");
+  db.media = db.media.filter((x) => x.id !== photo.id);
+  return [204, null];
 });
 route("GET", "/business/staff/:id/hours", (p) => {
   const hours = staffHours(ownBusiness(), p.id!);

@@ -76,6 +76,17 @@ export interface PublicStaff {
   id: string;
   name: string;
   serviceIds: string[];
+  photoId: string | null;
+  /** Solo en la demo: la imagen viene en la propia respuesta. */
+  photoSrc?: string | null;
+}
+export interface Photo {
+  id: string;
+  src?: string;
+}
+/** Foto del panel: de la galería (staffId null) o de un profesional. */
+export interface MediaItem extends Photo {
+  staffId: string | null;
 }
 export interface BusinessDetail {
   slug: string;
@@ -95,6 +106,7 @@ export interface BusinessDetail {
   staff: PublicStaff[];
   hours: { staffId: string; weekday: number; startTime: string; endTime: string }[];
   faq: { id: string; question: string; answer: string }[];
+  photos: Photo[];
 }
 export interface Slot {
   staffId: string;

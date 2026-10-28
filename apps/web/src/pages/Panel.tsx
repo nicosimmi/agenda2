@@ -5,6 +5,7 @@ import {
   IconMessageChatbot,
   IconHome,
   IconLogout,
+  IconPhoto,
   IconUsers,
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -31,6 +32,7 @@ const LINKS = [
   { label: "Perfil", href: "/panel/perfil", icon: <IconBuildingStore className={ICON} /> },
   { label: "Servicios", href: "/panel/servicios", icon: <IconCut className={ICON} /> },
   { label: "Equipo", href: "/panel/equipo", icon: <IconUsers className={ICON} /> },
+  { label: "Fotos", href: "/panel/fotos", icon: <IconPhoto className={ICON} /> },
   { label: "Agenda", href: "/panel/agenda", icon: <IconCalendarEvent className={ICON} /> },
   { label: "Asistente", href: "/panel/asistente", icon: <IconMessageChatbot className={ICON} /> },
 ];

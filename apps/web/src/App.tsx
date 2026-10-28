@@ -26,6 +26,7 @@ const Inicio = named(() => import("./pages/panel/Inicio.tsx"), "Inicio");
 const Perfil = named(() => import("./pages/panel/Perfil.tsx"), "Perfil");
 const Servicios = named(() => import("./pages/panel/Servicios.tsx"), "Servicios");
 const Equipo = named(() => import("./pages/panel/Equipo.tsx"), "Equipo");
+const Fotos = named(() => import("./pages/panel/Fotos.tsx"), "Fotos");
 const Agenda = named(() => import("./pages/panel/Agenda.tsx"), "Agenda");
 const Asistente = named(() => import("./pages/panel/Asistente.tsx"), "Asistente");
 
@@ -53,6 +54,7 @@ export function App() {
             <Route path="perfil" element={<Perfil />} />
             <Route path="servicios" element={<Servicios />} />
             <Route path="equipo" element={<Equipo />} />
+            <Route path="fotos" element={<Fotos />} />
             <Route path="agenda" element={<Agenda />} />
             <Route path="asistente" element={<Asistente />} />
           </Route>

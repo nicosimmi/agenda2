@@ -12,6 +12,7 @@ import { BookingFlow } from "../components/BookingFlow.tsx";
 import { CategoryIcon } from "../components/categoryIcon.tsx";
 import { Faq } from "../components/Faq.tsx";
 import { Loading, Skeleton } from "../components/Skeleton.tsx";
+import { photoSrc } from "../lib/image.ts";
 import { FAQ } from "../faqs.ts";
 import { duration, euros, WEEKDAYS } from "../format.ts";
 import type { BusinessDetail } from "../types.ts";
@@ -184,6 +185,23 @@ export function Business() {
             </Block>
           )}
 
+          {b.photos.length > 0 && (
+            <Block title="Fotos">
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {b.photos.map((p, i) => (
+                  <li key={p.id} className="overflow-hidden rounded-xl">
+                    <img
+                      src={photoSrc(p.id, p.src)}
+                      alt={`Foto ${i + 1} de ${b.name}`}
+                      loading="lazy"
+                      className="aspect-[4/3] w-full object-cover"
+                    />
+                  </li>
+                ))}
+              </ul>
+            </Block>
+          )}
+
           <Block title="Servicios y precios">
             <ul className="divide-line divide-y">
               {b.services.map((s) => (
@@ -209,9 +227,18 @@ export function Business() {
                     key={m.id}
                     className="border-line flex items-center gap-3 rounded-xl border p-3"
                   >
-                    <span className="bg-gold text-ink flex size-11 shrink-0 items-center justify-center rounded-full text-lg font-bold">
-                      {m.name.slice(0, 1)}
-                    </span>
+                    {m.photoId ? (
+                      <img
+                        src={photoSrc(m.photoId, m.photoSrc)}
+                        alt={`Foto de ${m.name}`}
+                        loading="lazy"
+                        className="size-11 shrink-0 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="bg-gold text-ink flex size-11 shrink-0 items-center justify-center rounded-full text-lg font-bold">
+                        {m.name.slice(0, 1)}
+                      </span>
+                    )}
                     <span>
                       <span className="block font-semibold">{m.name}</span>
                       <span className="text-muted block text-sm">

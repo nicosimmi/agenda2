@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../../api.ts";
+import { PhotoInput } from "../../components/PhotoInput.tsx";
 import { BlockSkeleton } from "../../components/Skeleton.tsx";
-import type { Service, Shift, Staff } from "../../types.ts";
+import { imageToDataUrl, photoSrc } from "../../lib/image.ts";
+import type { MediaItem, Service, Shift, Staff } from "../../types.ts";
 import {
   buttonClass,
   Field,
@@ -18,6 +20,7 @@ const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "
 export function Equipo() {
   const staff = useApi<Staff[]>("/business/staff");
   const services = useApi<Service[]>("/business/services");
+  const media = useApi<MediaItem[]>("/business/media");
   const { error, run } = useAction();
   const activeServices = services.data?.filter((s) => s.active) ?? [];
 
@@ -35,7 +38,14 @@ export function Equipo() {
     <>
       {staff.loading && <BlockSkeleton rows={3} />}
       {staff.data?.map((member) => (
-        <Member key={member.id} member={member} services={activeServices} reload={staff.reload} />
+        <Member
+          key={member.id}
+          member={member}
+          services={activeServices}
+          photo={media.data?.find((p) => p.staffId === member.id)}
+          reload={staff.reload}
+          reloadPhotos={media.reload}
+        />
       ))}
       <TimeOff staff={staff.data ?? []} />
       <Section title="Añadir profesional">
@@ -71,13 +81,33 @@ export function Equipo() {
 function Member({
   member,
   services,
+  photo,
   reload,
+  reloadPhotos,
 }: {
   member: Staff;
   services: Service[];
+  photo: MediaItem | undefined;
   reload: () => Promise<void>;
+  reloadPhotos: () => Promise<void>;
 }) {
-  const { error, run } = useAction();
+  const { error, busy, run } = useAction();
+
+  const setPhoto = async (files: File[]) => {
+    await run(async () => {
+      const image = await imageToDataUrl(files[0]!);
+      await api("/business/media", {
+        method: "POST",
+        body: JSON.stringify({ image, staffId: member.id }),
+      });
+    });
+    await reloadPhotos();
+  };
+  const removePhoto = async () => {
+    if (!photo) return;
+    await run(() => api(`/business/media/${photo.id}`, { method: "DELETE" }));
+    await reloadPhotos();
+  };
 
   const patch = async (body: Partial<Staff>) => {
     await run(() =>
@@ -108,6 +138,29 @@ function Member({
           Eliminar
         </button>
         {!member.active && <span className="text-muted">(inactivo)</span>}
+      </div>
+      <div className="flex items-center gap-4">
+        {photo ? (
+          <img
+            src={photoSrc(photo.id, photo.src)}
+            alt={`Foto de ${member.name}`}
+            className="size-16 rounded-full object-cover"
+          />
+        ) : (
+          <span className="bg-gold text-ink flex size-16 items-center justify-center rounded-full text-xl font-bold">
+            {member.name.slice(0, 1)}
+          </span>
+        )}
+        <PhotoInput
+          label={photo ? "Cambiar foto" : "Subir foto"}
+          disabled={busy}
+          onFiles={setPhoto}
+        />
+        {photo && (
+          <button className={linkButton} onClick={removePhoto}>
+            Quitar foto
+          </button>
+        )}
       </div>
       <fieldset>
         <legend className="text-sm font-semibold">Servicios que realiza</legend>
