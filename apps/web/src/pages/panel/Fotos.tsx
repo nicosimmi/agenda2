@@ -35,6 +35,10 @@ export function Fotos() {
         Se muestran en tu ficha pública. Hasta {MAX_GALLERY_PHOTOS} fotos; la de cada profesional se
         sube desde Equipo.
       </p>
+      <p className="text-muted text-sm">
+        Sube solo imágenes tuyas o de uso libre (tu logo, tu local, tu equipo), sin personas
+        reconocibles que no hayan dado su permiso. Eres responsable de lo que publicas.
+      </p>
       {loading && <BlockSkeleton rows={2} />}
       {gallery.length === 0 && !loading && <p className="text-muted">Aún no has subido fotos.</p>}
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">

@@ -440,3 +440,13 @@ El desarrollador pide imágenes del negocio y de los trabajadores en el panel. E
 5. **Demo.** Con las variables de Firebase, las fotos se comparten por Firestore (colección `media`, imagen reducida a menos de unos 110 kB y guardada como data URL) y se ven en cualquier dispositivo; sin ellas, viven en el `localStorage` de cada visitante. Se cambió la decisión inicial (no compartirlas) porque el desarrollador quiere que un negocio suba su logo, su local o a su equipo y se vea en todos los equipos. Riesgo aceptado: cualquiera con las cuentas de prueba puede subir imágenes que verán todos los visitantes. Mitigación: las reglas solo admiten imágenes de tamaño acotado, no dejan borrar (se marcan como retiradas) y la web vuelve a comprobar que lo recibido sea una imagen. Si hay abuso, se marcan como `removed` o se borra la colección desde la consola de Firebase.
 
 Tests: `apps/api/src/media.test.ts` y las entradas de aislamiento en `isolation.test.ts`.
+
+## F9-3. Imágenes de ejemplo y revisión de derechos de la demo pública
+
+La demo es pública, así que todo lo que se sirve tiene que ser propio o de licencia clara:
+
+1. **Ilustraciones generadas por código.** Los 8 negocios de la demo llevan tres imágenes de galería (logotipo, fachada y detalle) y una por profesional (retratos esquemáticos o una pista de pádel). Las dibuja `scripts/gen-demo-images.mjs` con formas geométricas propias, sin fotos, stock ni IA generativa de imágenes. Se sirven como SVG estático desde `public/img/demo`; el SVG solo es seguro porque lo genera el proyecto: lo que suben los usuarios sigue limitado a JPEG, PNG y WebP.
+2. **Nada de recursos externos en tiempo de ejecución.** Tipografía y texturas del globo están alojadas en el propio sitio. Se quitó un componente sin usar que apuntaba a una imagen de Aceternity.
+3. **Privacidad al día.** Se reescribió la página de Privacidad: ahora dice qué se guarda en el navegador, qué va a Firestore (Google), que es público y cómo pedir que se retire algo, y aclara que el asistente de la demo es un guion y no una IA.
+4. **Aviso al subir fotos** y `THIRD_PARTY_LICENSES.md` con las licencias, el texto OFL de la tipografía y los créditos de las texturas.
+5. **Pendiente de decisión del desarrollador:** licencia del código del repositorio y confirmar con Aceternity que sus componentes gratuitos se pueden publicar en un repositorio público.

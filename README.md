@@ -65,6 +65,10 @@ Lo hice por fases (ocho, de la base de datos a las evaluaciones), con commits pe
 - [`docs/DECISIONS.md`](docs/DECISIONS.md): decisiones técnicas
 - [`docs/PROGRESS.md`](docs/PROGRESS.md): estado actual
 
+## Licencias y créditos
+
+Todas las dependencias tienen licencias permisivas (MIT, ISC, Apache-2.0, BSD). El listado completo, la licencia de la tipografía, los créditos de las texturas del globo y el origen de los componentes de interfaz están en [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md). Las ilustraciones de los negocios de la demo son dibujos vectoriales generados por código (`node scripts/gen-demo-images.mjs`), sin fotos ni material de terceros.
+
 ## Autor
 
 Nicolás Simón Milano · [LinkedIn](https://www.linkedin.com/in/nicolas-simon-milano/) · [GitHub](https://github.com/nicosimmi)

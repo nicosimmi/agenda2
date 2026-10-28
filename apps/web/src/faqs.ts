@@ -137,7 +137,7 @@ export const FAQ: Record<string, FaqItem[]> = {
     },
     {
       q: "¿Compartís mis datos con terceros?",
-      a: "No los vendemos ni los cedemos. El asistente de IA envía lo que escribes en el chat a un proveedor externo (Anthropic) para responderte, y lo avisa en la propia ventana. Por eso conviene no escribir datos sensibles.",
+      a: "No los vendemos ni los cedemos. En esta demo pública, las reservas y las fotos de los negocios se guardan en Firestore (Google) para verlas desde otros dispositivos. En la instalación completa, el asistente de IA envía lo que escribes en el chat a un proveedor externo (Anthropic) para responderte, y lo avisa en la propia ventana. Por eso conviene no escribir datos sensibles.",
     },
   ],
   noEncontrada: [

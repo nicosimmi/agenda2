@@ -94,33 +94,66 @@ export function Privacy() {
   return (
     <Doc title="Privacidad" updated="octubre de 2026" faq="privacidad">
       <p>
-        AgendIA es un proyecto de portfolio con datos ficticios. Esta página explica cómo trataría
-        los datos si se usara con personas reales.
+        AgendIA es un proyecto de portfolio de Nicolás Simón Milano y esta web es una demostración
+        con datos ficticios. No escribas datos reales: ni tu nombre completo, ni tu email personal,
+        ni fotos de personas, ni imágenes que no sean tuyas.
       </p>
-      <h2>Qué datos tratamos</h2>
+      <h2>Qué se guarda en la demo pública</h2>
+      <ul>
+        <li>
+          <strong>En tu navegador</strong> (almacenamiento local): las cuentas de prueba que crees,
+          tus reservas, los cambios que hagas en un negocio, el tema y la respuesta al aviso de
+          cookies. Se borra al limpiar los datos del sitio.
+        </li>
+        <li>
+          <strong>En un servicio de Google (Firebase Firestore)</strong>: las reservas, para que el
+          negocio las vea desde otro dispositivo, y las fotos que suba un negocio, para que las vea
+          cualquiera. De una reserva se guarda el negocio, el profesional, el servicio, la hora, el
+          estado, el código y solo el nombre de pila del cliente. No se envían emails, teléfonos ni
+          notas. Como en cualquier petición web, Google recibe tu dirección IP.
+        </li>
+      </ul>
+      <p>
+        Lo que está en Firestore es visible para cualquiera que use la demo. No hay analítica,
+        publicidad ni cookies de seguimiento.
+      </p>
+      <h2>Fotos y contenido</h2>
+      <p>
+        Sube solo imágenes tuyas o de uso libre, sin personas reconocibles. Si ves algo que no
+        debería estar, escríbeme por{" "}
+        <a
+          href="https://www.linkedin.com/in/nicolas-simon-milano/"
+          className="text-gold-dark underline"
+        >
+          LinkedIn
+        </a>{" "}
+        y lo retiro. Lo mismo vale si quieres que borre una reserva tuya.
+      </p>
+      <h2>Si se usara con personas reales</h2>
+      <p>
+        Esta parte describe cómo trataría los datos la instalación completa (no la demo), que sí
+        tiene servidor y base de datos propios.
+      </p>
       <ul>
         <li>De los clientes: nombre, email y contraseña (guardada cifrada, nunca en claro).</li>
         <li>De las reservas: servicio, profesional, fecha y hora, y la nota que quieras dejar.</li>
-        <li>De los negocios: los datos de perfil que ellos mismos publican.</li>
+        <li>De los negocios: los datos de perfil y las fotos que ellos mismos publican.</li>
       </ul>
-      <h2>Quién ve qué</h2>
       <p>
         Un negocio solo ve el nombre de las personas que han reservado con él. Ningún negocio accede
-        a los datos de clientes que no han reservado en su agenda.
-      </p>
-      <h2>Tus derechos</h2>
-      <p>
-        Puedes pedir el acceso, la corrección o el borrado de tus datos. Al borrar una cuenta se
-        eliminan también sus reservas.
+        a los datos de clientes que no han reservado en su agenda. Puedes pedir el acceso, la
+        corrección o el borrado de tus datos; al borrar una cuenta se eliminan también sus reservas.
       </p>
       <h2>Inteligencia artificial</h2>
       <p>
-        El asistente de reservas es una IA de un tercero (Anthropic). Lo que escribes en el chat se
-        le envía para generar la respuesta, junto con los datos que el propio asistente consulta
-        para ayudarte (negocios, servicios y huecos y, si has iniciado sesión, tus reservas). No
-        escribas datos sensibles. AgendIA guarda un registro de lo que hace el asistente (qué
-        herramienta usó y cuándo, sin el texto de la conversación) y lo limita por uso y gasto. El
-        asistente nunca confirma una reserva por su cuenta: lo haces tú con un botón.
+        En esta demo el asistente sigue un guion fijo: no es una IA y no envía lo que escribes a
+        ningún modelo. En la instalación completa es una IA de un tercero (Anthropic): lo que
+        escribes en el chat se le envía para generar la respuesta, junto con los datos que el propio
+        asistente consulta para ayudarte (negocios, servicios y huecos y, si has iniciado sesión,
+        tus reservas). No escribas datos sensibles. AgendIA guarda un registro de lo que hace el
+        asistente (qué herramienta usó y cuándo, sin el texto de la conversación) y lo limita por
+        uso y gasto. El asistente nunca confirma una reserva por su cuenta: lo haces tú con un
+        botón.
       </p>
       <p>
         Antes de usar AgendIA con personas reales habría que revisar las obligaciones legales,
