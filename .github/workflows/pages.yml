@@ -31,6 +31,10 @@ jobs:
         env:
           VITE_DEMO: "1"
           VITE_BASE: /${{ github.event.repository.name }}/
+          # Opcionales: con ellos, las reservas de la demo se comparten entre equipos (shared.ts).
+          # Son valores públicos de la web de Firebase, no secretos: variables del repositorio.
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
       # GitHub Pages no sabe de rutas de una SPA: una URL profunda (/n/negocio) sirve 404.html,
       # que es la misma aplicación y resuelve la ruta en el navegador.
       - run: cp apps/web/dist/index.html apps/web/dist/404.html

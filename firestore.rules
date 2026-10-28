@@ -1,0 +1,41 @@
+// Reglas de Firestore para las reservas compartidas de la demo (apps/web/src/demo/shared.ts).
+// Cualquiera puede leer y escribir desde el navegador (la demo no tiene cuentas reales), así que
+// las reglas limitan lo que se puede hacer: solo crear reservas con la forma esperada, solo
+// cambiar su estado u hora, y nunca borrar. Se pegan en Firebase > Firestore > Reglas.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /bookings/{id} {
+      allow read: if true;
+
+      allow create: if request.resource.data.keys().hasOnly([
+          'id', 'businessSlug', 'staffName', 'serviceName', 'code', 'startsAt', 'endsAt',
+          'status', 'source', 'customerName', 'expiresAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'id', 'businessSlug', 'staffName', 'serviceName', 'code', 'startsAt', 'endsAt',
+          'status', 'source', 'customerName', 'expiresAt'
+        ])
+        && request.resource.data.id == id
+        && request.resource.data.businessSlug is string && request.resource.data.businessSlug.size() < 80
+        && request.resource.data.staffName is string && request.resource.data.staffName.size() < 80
+        && request.resource.data.serviceName is string && request.resource.data.serviceName.size() < 120
+        && request.resource.data.code is string && request.resource.data.code.size() <= 12
+        && request.resource.data.startsAt is string && request.resource.data.startsAt.size() <= 30
+        && request.resource.data.endsAt is string && request.resource.data.endsAt.size() <= 30
+        && request.resource.data.status in ['pending', 'confirmed', 'cancelled', 'completed', 'no_show', 'expired']
+        && request.resource.data.source in ['web', 'agent', 'business']
+        && request.resource.data.customerName is string && request.resource.data.customerName.size() <= 40
+        && request.resource.data.expiresAt is string && request.resource.data.expiresAt.size() <= 30;
+
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'startsAt', 'endsAt', 'staffName', 'expiresAt'])
+        && request.resource.data.status in ['pending', 'confirmed', 'cancelled', 'completed', 'no_show', 'expired']
+        && request.resource.data.startsAt.size() <= 30
+        && request.resource.data.endsAt.size() <= 30
+        && request.resource.data.staffName.size() < 80;
+
+      allow delete: if false;
+    }
+  }
+}

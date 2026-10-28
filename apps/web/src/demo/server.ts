@@ -2,9 +2,11 @@
 // responde a las mismas rutas con los mismos formatos, sobre los datos ficticios del seed guardados
 // en memoria y en localStorage. Los huecos libres salen del mismo motor que usa la API de verdad
 // (`packages/core`) y los datos de entrada se validan con los mismos esquemas de `packages/shared`.
-// No hay servidor: nada sale del navegador, y el asistente es un guion fijo, no una IA.
+// No hay servidor: los datos viven en el navegador (salvo las reservas, que pueden compartirse con
+// otros equipos a través de Firestore, ver shared.ts), y el asistente es un guion fijo, no una IA.
 import { computeAvailability, localDate, DAY_MS } from "@agendia/core";
 import { uuid } from "../uuid.ts";
+import { fetchShared, pushShared, sharingEnabled, type SharedBooking } from "./shared.ts";
 import {
   DEMO_BUSINESSES,
   DEMO_CATEGORIES,
@@ -1147,6 +1149,100 @@ const json = (status: number, body: unknown) =>
         headers: { "content-type": "application/json" },
       });
 
+// --- Reservas compartidas entre navegadores (opcional, ver shared.ts) ---
+
+/** Lo último que se subió o bajó de cada reserva: solo se sube lo que ha cambiado desde entonces. */
+const synced = new Map<string, string>();
+const fingerprint = (b: Booking) => [b.status, b.startsAt, b.staffId, b.expiresAt].join("|");
+let lastPull = 0;
+let pushing: Promise<unknown> = Promise.resolve();
+const sharesBookings = (path: string) => /\/bookings|\/availability|\/agent\//.test(path);
+const firstName = (name: string | null | undefined) =>
+  (name ?? "").trim().split(/\s+/)[0]!.slice(0, 40);
+
+function toShared(b: Booking): SharedBooking | null {
+  const business = db.businesses.find((x) => x.id === b.businessId);
+  const staff = db.staff.find((x) => x.id === b.staffId);
+  const service = db.services.find((x) => x.id === b.serviceId);
+  if (!business || !staff || !service) return null;
+  return {
+    id: b.id,
+    businessSlug: business.slug,
+    staffName: staff.name,
+    serviceName: service.name,
+    code: b.code,
+    startsAt: b.startsAt,
+    endsAt: b.endsAt,
+    status: b.status,
+    source: b.source,
+    customerName: firstName(db.users.find((u) => u.id === b.customerId)?.name ?? b.guestName),
+    expiresAt: b.expiresAt ?? "",
+  };
+}
+
+/** Trae las reservas de otros equipos y las mezcla con las locales. Si falla la red, no pasa nada. */
+async function pullShared(force: boolean) {
+  if (!sharingEnabled || (!force && Date.now() - lastPull < 3000)) return;
+  lastPull = Date.now();
+  await pushing;
+  let remote: SharedBooking[];
+  try {
+    remote = await fetchShared();
+  } catch {
+    return;
+  }
+  for (const r of remote) {
+    const business = db.businesses.find((x) => x.slug === r.businessSlug);
+    const staff = db.staff.find((x) => x.businessId === business?.id && x.name === r.staffName);
+    const service = db.services.find(
+      (x) => x.businessId === business?.id && x.name === r.serviceName,
+    );
+    if (!business || !staff || !service) continue;
+    const status = r.status as Status;
+    const local = db.bookings.find((x) => x.id === r.id);
+    const next = {
+      status,
+      startsAt: r.startsAt,
+      endsAt: r.endsAt,
+      staffId: staff.id,
+      expiresAt: r.expiresAt || null,
+    };
+    if (local) Object.assign(local, next);
+    else
+      db.bookings.push({
+        id: r.id,
+        businessId: business.id,
+        code: r.code,
+        serviceId: service.id,
+        customerId: null,
+        guestName: r.customerName,
+        guestPhone: null,
+        notes: null,
+        source: r.source as Booking["source"],
+        ...next,
+      });
+    const stored = db.bookings.find((x) => x.id === r.id)!;
+    synced.set(r.id, fingerprint(stored));
+  }
+  save();
+}
+
+/** Sube las reservas nuevas o modificadas. No espera: la respuesta al usuario no depende de la red. */
+function pushChanged() {
+  if (!sharingEnabled) return;
+  for (const b of db.bookings) {
+    if (synced.get(b.id) === fingerprint(b)) continue;
+    const shared = toShared(b);
+    if (!shared) continue;
+    synced.set(b.id, fingerprint(b));
+    pushing = pushing.then(() =>
+      pushShared(shared).catch(() => {
+        synced.delete(b.id); // se reintenta en el siguiente cambio
+      }),
+    );
+  }
+}
+
 /** Atiende una petición a /api/…; devuelve la misma respuesta que daría la API. */
 export async function handle(method: string, url: URL, rawBody: string | null): Promise<Response> {
   const path = url.pathname.replace(/^.*?\/api(?=\/)/, "");
@@ -1157,12 +1253,16 @@ export async function handle(method: string, url: URL, rawBody: string | null): 
     return json(400, { error: { code: "BAD_REQUEST", message: "JSON no válido" } });
   }
   if (method === "POST" && path === "/public/chat") return chatStream(body);
+  if (sharesBookings(path)) await pullShared(method !== "GET");
   for (const [m, pattern, handler] of routes) {
     const match = m === method ? pattern.exec(path) : null;
     if (!match) continue;
     try {
       const result = handler(match.groups ?? {}, url.searchParams, body);
-      if (method !== "GET") save();
+      if (method !== "GET") {
+        save();
+        pushChanged();
+      }
       return Array.isArray(result) && typeof result[0] === "number" && result.length === 2
         ? json(result[0], result[1])
         : json(200, result);
