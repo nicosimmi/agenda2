@@ -5,8 +5,15 @@
 // el nombre de pila. Sin VITE_FIREBASE_PROJECT_ID y VITE_FIREBASE_API_KEY no hace nada.
 // Las reglas que lo protegen están en firestore.rules (raíz del repositorio).
 
-const PROJECT = import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined;
-const API_KEY = import.meta.env.VITE_FIREBASE_API_KEY as string | undefined;
+// Se limpian los espacios y signos que se cuelan al copiar y pegar (por ejemplo un punto final).
+const PROJECT = (import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined)?.replace(
+  /[^a-z0-9-]/gi,
+  "",
+);
+const API_KEY = (import.meta.env.VITE_FIREBASE_API_KEY as string | undefined)?.replace(
+  /[^A-Za-z0-9_-]/g,
+  "",
+);
 export const sharingEnabled = Boolean(PROJECT && API_KEY);
 
 /** Los ids de negocio, profesional y servicio se generan en cada navegador: se usan nombres. */
