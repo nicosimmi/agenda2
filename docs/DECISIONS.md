@@ -428,3 +428,15 @@ El desarrollador quiere poder entrar también con Google. Es gratis (el ID de cl
 Tests: `apps/api/src/google.test.ts`, con un Google simulado (ningún test llama a Google).
 
 **Revisión cruzada (subagente sin contexto).** Corregido: una cuenta ya vinculada a otro `sub` de Google no se reclama (email reciclado), el `UPDATE` exige `google_sub IS NULL`, los logs no guardan el error completo y los tests comprueban que la clave antigua deja de valer. Aceptado: la cookie `oauth` no va firmada (el riesgo es el login-CSRF por «cookie tossing» desde un subdominio hermano; la API se sirve en el mismo host que la web, sin subdominios compartidos), y el ID token no se verifica con JWKS porque se recibe directo de Google por HTTPS.
+
+## F9-2. Fotos del negocio y de sus profesionales
+
+El desarrollador pide imágenes del negocio y de los trabajadores en el panel. El SPEC dejaba las fotos para la versión B (almacenamiento tipo S3); aquí se hace una versión mínima y gratuita, sin servicios externos ni dependencias nuevas:
+
+1. **En Postgres, no en S3.** Tabla `business_media` (`bytea`): `staff_id` nulo es la galería del negocio (máximo 8) y con valor es la foto de un profesional (una, la nueva sustituye a la anterior). Clave foránea compuesta `(staff_id, business_id)`, como el resto: una foto no puede apuntar a un profesional de otro negocio. Al migrar a almacenamiento de objetos solo cambia `media.ts`.
+2. **La web reduce la foto antes de subirla** (JPEG, 1000 px por lado, menos de 300 kB). Así pesa poco, no se sube el original con su ubicación EXIF y no hace falta `multipart`: llega como data URL en JSON.
+3. **La API no se fía del navegador.** Comprueba el tamaño y los bytes reales (JPEG, PNG o WebP); cualquier otra cosa, incluido SVG, se rechaza porque un SVG puede llevar scripts.
+4. **Servir.** `GET /public/media/:id` (UUID aleatorio, no enumerable) con su tipo real, `nosniff`, `Content-Security-Policy: default-src 'none'` y caché inmutable. Funciona con el negocio en borrador, para que el panel enseñe sus fotos antes de publicar; un negocio suspendido deja de servirlas.
+5. **Demo.** Las fotos se guardan en el `localStorage` de cada visitante (como el resto de datos de negocio) y no se comparten por Firestore: dejar que cualquiera suba imágenes a un almacén público permitiría vandalizar la demo.
+
+Tests: `apps/api/src/media.test.ts` y las entradas de aislamiento en `isolation.test.ts`.

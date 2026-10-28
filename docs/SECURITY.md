@@ -15,6 +15,7 @@ Revisión hecha sobre el código y la configuración de la rama `main` (octubre 
 - **Inyección SQL.** Todas las consultas van parametrizadas (Drizzle y `sql` con parámetros).
 - **XSS.** Ni `dangerouslySetInnerHTML` ni `innerHTML` en la web; los correos son texto plano.
 - **Secretos.** `.env` fuera de Git, sin claves en el historial, el seed se niega a correr con `NODE_ENV=production`, y los puertos de Docker solo escuchan en `127.0.0.1`.
+- **Fotos.** Solo JPEG, PNG y WebP comprobados por sus bytes (nunca SVG), con tamaño máximo; se sirven con su tipo real, `nosniff` y una política `default-src 'none'`. Las rutas de subida y borrado son del negocio de la sesión.
 - **Dependencias.** `pnpm audit --prod`: sin vulnerabilidades conocidas.
 
 ## Riesgos conocidos y qué hacer

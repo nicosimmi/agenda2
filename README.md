@@ -128,7 +128,7 @@ Para generar una migración nueva tras cambiar `schema.ts`: `pnpm --filter @agen
 pnpm --filter @agendia/api dev   # http://127.0.0.1:3000 (se reinicia al guardar)
 ```
 
-Rutas: `GET /health`; públicas `GET /public/categories|businesses|businesses/:slug|businesses/:slug/availability`; `POST /auth/register|login|logout`, `GET /auth/me`; de cliente `GET|POST /me/bookings` (con `Idempotency-Key`) y `POST /me/bookings/:id/cancel|reschedule`; de propietario `/business/*` (perfil, servicios, equipo, horarios, ausencias, agenda y publicación); y `POST /admin/businesses/:id/suspend`. Los errores siempre tienen la forma `{ "error": { "code", "message" } }`.
+Rutas: `GET /health`; públicas `GET /public/categories|businesses|businesses/:slug|businesses/:slug/availability|media/:id`; `POST /auth/register|login|logout`, `GET /auth/me`; de cliente `GET|POST /me/bookings` (con `Idempotency-Key`) y `POST /me/bookings/:id/cancel|reschedule`; de propietario `/business/*` (perfil, servicios, equipo, fotos, horarios, ausencias, agenda y publicación); y `POST /admin/businesses/:id/suspend`. Los errores siempre tienen la forma `{ "error": { "code", "message" } }`.
 
 La sesión va en una cookie `sid` HttpOnly. Las peticiones que cambian datos desde el navegador tienen que venir de un origen de `WEB_ORIGIN` (protección CSRF). Con `curl` no hace falta cabecera `Origin` mientras no se envíe la cookie.
 
