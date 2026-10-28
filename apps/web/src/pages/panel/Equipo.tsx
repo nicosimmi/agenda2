@@ -19,12 +19,14 @@ export function Equipo() {
   const staff = useApi<Staff[]>("/business/staff");
   const services = useApi<Service[]>("/business/services");
   const { error, run } = useAction();
+  const activeServices = services.data?.filter((s) => s.active) ?? [];
 
   async function add(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
-    const name = new FormData(form).get("name");
-    if (await run(() => api("/business/staff", { method: "POST", body: JSON.stringify({ name }) })))
+    const data = new FormData(form);
+    const body = { name: data.get("name"), serviceIds: data.getAll("serviceIds") };
+    if (await run(() => api("/business/staff", { method: "POST", body: JSON.stringify(body) })))
       form.reset();
     await staff.reload();
   }
@@ -33,20 +35,32 @@ export function Equipo() {
     <>
       {staff.loading && <BlockSkeleton rows={3} />}
       {staff.data?.map((member) => (
-        <Member
-          key={member.id}
-          member={member}
-          services={services.data?.filter((s) => s.active) ?? []}
-          reload={staff.reload}
-        />
+        <Member key={member.id} member={member} services={activeServices} reload={staff.reload} />
       ))}
       <TimeOff staff={staff.data ?? []} />
       <Section title="Añadir profesional">
-        <form onSubmit={add} className="flex items-end gap-4">
-          <div className="flex-1">
-            <Field label="Nombre" name="name" required />
+        <form onSubmit={add} className="grid gap-4">
+          <Field label="Nombre" name="name" required />
+          <fieldset>
+            <legend className="text-sm font-semibold">Servicios que realiza</legend>
+            {activeServices.length === 0 && <p className="text-muted">Crea primero un servicio.</p>}
+            <div className="flex flex-wrap gap-x-5">
+              {activeServices.map((s) => (
+                <label key={s.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="serviceIds"
+                    value={s.id}
+                    className="accent-gold-dark"
+                  />
+                  {s.name}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <div>
+            <button className={buttonClass}>Añadir</button>
           </div>
-          <button className={buttonClass}>Añadir</button>
         </form>
         <FormError message={error} />
       </Section>

@@ -243,24 +243,27 @@ export function Landing() {
         <Faq items={FAQ.inicio!} />
       </Page>
 
-      <LampContainer className="-mb-24 min-h-[16rem] bg-ink md:min-h-[34rem]">
-        <motion.div
-          initial={{ opacity: 0.5, y: 80 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.8, ease: "easeInOut" }}
-          className="text-center max-md:pt-28"
-        >
-          <h2 className="pb-4 text-4xl leading-tight font-bold text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] md:text-6xl">
-            ¿Listo para abrir tu agenda?
-          </h2>
-          <Link
-            to="/alta"
-            className="bg-gold text-ink hover:bg-gold-hover mt-8 inline-block rounded-md px-8 py-3 font-bold transition-colors"
+      {/* En escritorio el contenido sube 20 rem y deja vacío el final: se recorta el sobrante. */}
+      <div className="-mb-24 md:h-[20rem] md:overflow-hidden">
+        <LampContainer className="min-h-[16rem] bg-ink md:min-h-[34rem]">
+          <motion.div
+            initial={{ opacity: 0.5, y: 80 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.8, ease: "easeInOut" }}
+            className="text-center max-md:pt-28"
           >
-            Empezar ahora
-          </Link>
-        </motion.div>
-      </LampContainer>
+            <h2 className="pb-4 text-4xl leading-tight font-bold text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] md:text-6xl">
+              ¿Listo para abrir tu agenda?
+            </h2>
+            <Link
+              to="/alta"
+              className="bg-gold text-ink hover:bg-gold-hover mt-8 inline-block rounded-md px-8 py-3 font-bold transition-colors"
+            >
+              Empezar ahora
+            </Link>
+          </motion.div>
+        </LampContainer>
+      </div>
     </>
   );
 }
