@@ -213,6 +213,20 @@ export const tokenCreateSchema = z.object({
 });
 export type TokenCreateInput = z.infer<typeof tokenCreateSchema>;
 
+// Fotos del negocio y de sus profesionales. La web las reduce antes de subirlas (JPEG, 1000 px) y
+// llegan como data URL; la API además comprueba los bytes reales del fichero.
+export const MAX_GALLERY_PHOTOS = 8;
+export const MAX_PHOTO_BYTES = 300_000;
+export const mediaUploadSchema = z.object({
+  image: z
+    .string()
+    .max(Math.ceil((MAX_PHOTO_BYTES * 4) / 3) + 64, "La imagen pesa demasiado")
+    .regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/, "Imagen no válida"),
+  // Sin profesional: foto de la galería del negocio.
+  staffId: z.uuid().optional(),
+});
+export type MediaUpload = z.infer<typeof mediaUploadSchema>;
+
 export type UserRole = "customer" | "business_owner" | "platform_admin";
 
 export interface Me {

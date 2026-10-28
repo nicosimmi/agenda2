@@ -52,6 +52,10 @@ interface RouteSpec {
   isolation?: (f: Fixture) => Promise<void>;
 }
 
+// PNG de 1×1 píxel: lo mínimo que pasa la comprobación de bytes de la API.
+const PNG =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
 const RANGE = "from=2030-01-01T00:00:00Z&to=2030-01-31T00:00:00Z";
 
 const ROUTES: Record<string, RouteSpec> = {
@@ -65,6 +69,7 @@ const ROUTES: Record<string, RouteSpec> = {
   "GET /public/businesses": { access: "public" },
   "GET /public/businesses/:slug": { access: "public" },
   "GET /public/businesses/:slug/availability": { access: "public" },
+  "GET /public/media/:id": { access: "public" },
   "GET /public/chat": { access: "public" },
   "POST /public/chat": { access: "public" },
   "POST /auth/register": { access: "public" },
@@ -337,6 +342,43 @@ const ROUTES: Record<string, RouteSpec> = {
       const res = await send("DELETE", `/business/services/${f.serviceB}`, f.ownerA);
       expect(res.statusCode).toBe(404);
       expect(await get("/business/services", f.ownerB)).toHaveLength(1);
+    },
+  },
+
+  "GET /business/media": {
+    access: "business_owner",
+    isolation: async (f) => {
+      await send("POST", "/business/media", f.ownerB, { image: PNG });
+      expect(await get("/business/media", f.ownerA)).toHaveLength(0);
+      expect(await get("/business/media", f.ownerB)).toHaveLength(1);
+    },
+  },
+  "POST /business/media": {
+    access: "business_owner",
+    isolation: async (f) => {
+      // Un profesional de otro negocio no existe para este.
+      const bad = await send("POST", "/business/media", f.ownerA, {
+        image: PNG,
+        staffId: f.staffB,
+      });
+      expect(bad.statusCode).toBe(404);
+      const ok = await send("POST", "/business/media", f.ownerA, { image: PNG, staffId: f.staffA });
+      expect(ok.statusCode).toBe(201);
+      expect(await get("/business/media", f.ownerB)).toHaveLength(0);
+    },
+  },
+  "DELETE /business/media/:id": {
+    access: "business_owner",
+    sample: () => "/business/media/00000000-0000-4000-8000-000000000000",
+    isolation: async (f) => {
+      const created = (await send("POST", "/business/media", f.ownerB, { image: PNG })).json();
+      expect((await send("DELETE", `/business/media/${created.id}`, f.ownerA)).statusCode).toBe(
+        404,
+      );
+      expect(await get("/business/media", f.ownerB)).toHaveLength(1);
+      expect((await send("DELETE", `/business/media/${created.id}`, f.ownerB)).statusCode).toBe(
+        204,
+      );
     },
   },
 

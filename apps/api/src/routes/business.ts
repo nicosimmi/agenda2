@@ -4,6 +4,7 @@ import {
   bookingStatusSchema,
   businessProfileUpdateSchema,
   manualBookingSchema,
+  mediaUploadSchema,
   serviceSchema,
   serviceUpdateSchema,
   staffSchema,
@@ -17,6 +18,7 @@ import { desc, eq } from "drizzle-orm";
 import { agentEvents } from "../db/schema.ts";
 import { forbidden, notFound } from "../errors.ts";
 import { requireRole, tenantOf, userOf } from "../guards.ts";
+import { addMedia, deleteMedia, listMedia } from "../media.ts";
 import * as panel from "../panel.ts";
 import { getBusinessProfile, listBusinessBookings, tenantForOwner } from "../tenant.ts";
 
@@ -76,6 +78,19 @@ export async function businessRoutes(app: FastifyInstance) {
   app.delete("/services/:id", async (req) =>
     panel.deleteService(db, tenantOf(req), idParams.parse(req.params).id),
   );
+
+  // --- Fotos (galería del negocio y una por profesional) ---
+  app.get("/media", async (req) => listMedia(db, tenantOf(req)));
+  app.post(
+    "/media",
+    { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
+    async (req, reply) =>
+      reply.code(201).send(await addMedia(db, tenantOf(req), mediaUploadSchema.parse(req.body))),
+  );
+  app.delete("/media/:id", async (req, reply) => {
+    await deleteMedia(db, tenantOf(req), idParams.parse(req.params).id);
+    return reply.code(204).send();
+  });
 
   // --- Profesionales y sus horarios ---
   app.get("/staff", async (req) => panel.listStaff(db, tenantOf(req)));

@@ -22,10 +22,12 @@ import {
   time,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
 const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
+const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
 
 const id = () => uuid("id").primaryKey().defaultRandom();
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
@@ -258,6 +260,33 @@ export const bookings = pgTable(
     index("bookings_staff_idx").on(t.staffId),
     index("bookings_customer_idx").on(t.customerId),
     // + restricción de exclusión anti-solapamiento en 0001_custom.sql
+  ],
+);
+
+// Fotos del negocio (staff_id NULL: galería) y de sus profesionales (una por profesional). Se
+// guardan en la propia base de datos: la web las reduce antes de subirlas y la API comprueba que
+// sean de verdad JPEG, PNG o WebP. Con la clave foránea compuesta, una foto nunca apunta a un
+// profesional de otro negocio.
+export const businessMedia = pgTable(
+  "business_media",
+  {
+    id: id(),
+    businessId: businessId(),
+    staffId: uuid("staff_id"),
+    contentType: text("content_type").notNull(),
+    data: bytea("data").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    foreignKey({
+      name: "business_media_staff_fk",
+      columns: [t.staffId, t.businessId],
+      foreignColumns: [staff.id, staff.businessId],
+    }).onDelete("cascade"),
+    uniqueIndex("business_media_staff_unique")
+      .on(t.staffId)
+      .where(sql`${t.staffId} is not null`),
+    index("business_media_business_idx").on(t.businessId),
   ],
 );
 
