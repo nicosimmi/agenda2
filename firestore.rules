@@ -1,4 +1,4 @@
-// Reglas de Firestore para las reservas compartidas de la demo (apps/web/src/demo/shared.ts).
+// Reglas de Firestore para las reservas y las fotos compartidas de la demo (apps/web/src/demo/shared.ts).
 // Cualquiera puede leer y escribir desde el navegador (la demo no tiene cuentas reales), así que
 // las reglas limitan lo que se puede hacer: solo crear reservas con la forma esperada, solo
 // cambiar su estado u hora, y nunca borrar. Se pegan en Firebase > Firestore > Reglas.
@@ -34,6 +34,30 @@ service cloud.firestore {
         && request.resource.data.startsAt.size() <= 30
         && request.resource.data.endsAt.size() <= 30
         && request.resource.data.staffName.size() < 80;
+
+      allow delete: if false;
+    }
+
+    // Fotos de los negocios y de sus profesionales: solo imágenes ya reducidas (data URL), con un
+    // tamaño máximo, y no se pueden borrar: se marcan como retiradas (`removed`).
+    match /media/{id} {
+      allow read: if true;
+
+      allow create: if request.resource.data.keys().hasOnly([
+          'id', 'businessSlug', 'staffName', 'image', 'removed'
+        ])
+        && request.resource.data.keys().hasAll([
+          'id', 'businessSlug', 'staffName', 'image', 'removed'
+        ])
+        && request.resource.data.id == id
+        && request.resource.data.businessSlug is string && request.resource.data.businessSlug.size() < 80
+        && request.resource.data.staffName is string && request.resource.data.staffName.size() < 80
+        && request.resource.data.image is string && request.resource.data.image.size() <= 220000
+        && request.resource.data.image.matches('data:image/(jpeg|png|webp);base64,.*')
+        && request.resource.data.removed == '';
+
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['removed'])
+        && request.resource.data.removed == '1';
 
       allow delete: if false;
     }

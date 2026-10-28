@@ -6,7 +6,15 @@
 // otros equipos a través de Firestore, ver shared.ts), y el asistente es un guion fijo, no una IA.
 import { computeAvailability, localDate, DAY_MS } from "@agendia/core";
 import { uuid } from "../uuid.ts";
-import { fetchShared, pushShared, sharingEnabled, type SharedBooking } from "./shared.ts";
+import {
+  fetchShared,
+  fetchSharedMedia,
+  pushShared,
+  pushSharedMedia,
+  removeSharedMedia,
+  sharingEnabled,
+  type SharedBooking,
+} from "./shared.ts";
 import {
   DEMO_BUSINESSES,
   DEMO_CATEGORIES,
@@ -244,9 +252,14 @@ function load(): State {
 }
 
 let db = load();
+/** Fotos que ya están en Firestore (id → negocio). Esas no se guardan en localStorage: pesan mucho. */
+const syncedMedia = new Map<string, string>();
 const save = () => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    const persisted = sharingEnabled
+      ? { ...db, media: db.media.filter((p) => !syncedMedia.has(p.id)) }
+      : db;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
   } catch {
     // sin almacenamiento (modo privado): la demo sigue en memoria
   }
@@ -857,7 +870,8 @@ route("POST", "/business/media", (_, __, body) => {
     throw conflict(`Máximo ${MAX_GALLERY_PHOTOS} fotos en la galería`);
   }
   const photo: Media = {
-    id: uuid(),
+    // Empieza por la hora para que, al leerlas de Firestore, salgan en el orden en que se subieron.
+    id: `${Date.now().toString(36)}-${uuid()}`,
     businessId: b.id,
     staffId: input.staffId ?? null,
     src: input.image,
@@ -1209,7 +1223,6 @@ const json = (status: number, body: unknown) =>
 /** Lo último que se subió o bajó de cada reserva: solo se sube lo que ha cambiado desde entonces. */
 const synced = new Map<string, string>();
 const fingerprint = (b: Booking) => [b.status, b.startsAt, b.staffId, b.expiresAt].join("|");
-let lastPull = 0;
 let pushing: Promise<unknown> = Promise.resolve();
 const sharesBookings = (path: string) => /\/bookings|\/availability|\/agent\//.test(path);
 const firstName = (name: string | null | undefined) =>
@@ -1235,10 +1248,25 @@ function toShared(b: Booking): SharedBooking | null {
   };
 }
 
+const downloads = new Map<string, { at: number; done: Promise<void> }>();
+/**
+ * Reutiliza una descarga reciente, también la que sigue en curso: la web lanza varias peticiones a
+ * la vez y todas deben esperar a los mismos datos, no responder con lo que haya antes de que lleguen.
+ */
+function downloadOnce(key: string, force: boolean, run: () => Promise<void>) {
+  const last = downloads.get(key);
+  if (!force && last && Date.now() - last.at < 3000) return last.done;
+  const done = run();
+  downloads.set(key, { at: Date.now(), done });
+  return done;
+}
+const pullShared = (force: boolean) =>
+  sharingEnabled ? downloadOnce("bookings", force, downloadShared) : undefined;
+const pullMedia = (slug: string, force: boolean) =>
+  downloadOnce(`media:${slug}`, force, () => downloadMedia(slug));
+
 /** Trae las reservas de otros equipos y las mezcla con las locales. Si falla la red, no pasa nada. */
-async function pullShared(force: boolean) {
-  if (!sharingEnabled || (!force && Date.now() - lastPull < 3000)) return;
-  lastPull = Date.now();
+async function downloadShared() {
   await pushing;
   let remote: SharedBooking[];
   try {
@@ -1298,6 +1326,72 @@ function pushChanged() {
   }
 }
 
+/** Negocio cuyas fotos hay que traer antes de contestar: su ficha pública o las de su propio panel. */
+function mediaSlug(method: string, path: string): string | undefined {
+  const page = /^\/public\/businesses\/([^/]+)$/.exec(path);
+  if (page && method === "GET") return decodeURIComponent(page[1]!);
+  if (!path.startsWith("/business/media")) return undefined;
+  try {
+    return ownBusiness().slug;
+  } catch {
+    return undefined; // sin sesión: la ruta responde con su error de siempre
+  }
+}
+
+/** Trae las fotos de un negocio de Firestore. Las que aún no se han subido se conservan. */
+async function downloadMedia(slug: string) {
+  await pushing;
+  const business = db.businesses.find((x) => x.slug === slug);
+  if (!business) return;
+  let remote;
+  try {
+    remote = await fetchSharedMedia(slug);
+  } catch {
+    return;
+  }
+  const stale = new Set(
+    [...syncedMedia].filter(([, businessId]) => businessId === business.id).map(([id]) => id),
+  );
+  db.media = db.media.filter((p) => !stale.has(p.id));
+  for (const id of stale) syncedMedia.delete(id);
+  for (const r of remote) {
+    const member = r.staffName
+      ? db.staff.find((m) => m.businessId === business.id && m.name === r.staffName)
+      : null;
+    if (r.staffName && !member) continue;
+    db.media.push({ id: r.id, businessId: business.id, staffId: member?.id ?? null, src: r.image });
+    syncedMedia.set(r.id, business.id);
+  }
+}
+
+/** Sube las fotos nuevas y marca como retiradas las que ya no están. No espera a la red. */
+function pushMediaChanged() {
+  if (!sharingEnabled) return;
+  for (const id of [...syncedMedia.keys()]) {
+    if (db.media.some((p) => p.id === id)) continue;
+    syncedMedia.delete(id);
+    pushing = pushing.then(() => removeSharedMedia(id).catch(() => undefined));
+  }
+  for (const p of db.media) {
+    if (syncedMedia.has(p.id)) continue;
+    const business = db.businesses.find((x) => x.id === p.businessId);
+    const member = db.staff.find((x) => x.id === p.staffId);
+    if (!business) continue;
+    syncedMedia.set(p.id, p.businessId);
+    pushing = pushing.then(() =>
+      pushSharedMedia({
+        id: p.id,
+        businessSlug: business.slug,
+        staffName: member?.name ?? "",
+        image: p.src,
+        removed: "",
+      }).catch(() => {
+        syncedMedia.delete(p.id); // se guarda en el navegador y se reintenta en el siguiente cambio
+      }),
+    );
+  }
+}
+
 /** Atiende una petición a /api/…; devuelve la misma respuesta que daría la API. */
 export async function handle(method: string, url: URL, rawBody: string | null): Promise<Response> {
   const path = url.pathname.replace(/^.*?\/api(?=\/)/, "");
@@ -1309,14 +1403,17 @@ export async function handle(method: string, url: URL, rawBody: string | null): 
   }
   if (method === "POST" && path === "/public/chat") return chatStream(body);
   if (sharesBookings(path)) await pullShared(method !== "GET");
+  const slug = sharingEnabled ? mediaSlug(method, path) : undefined;
+  if (slug) await pullMedia(slug, method !== "GET");
   for (const [m, pattern, handler] of routes) {
     const match = m === method ? pattern.exec(path) : null;
     if (!match) continue;
     try {
       const result = handler(match.groups ?? {}, url.searchParams, body);
       if (method !== "GET") {
-        save();
         pushChanged();
+        pushMediaChanged();
+        save();
       }
       return Array.isArray(result) && typeof result[0] === "number" && result.length === 2
         ? json(result[0], result[1])

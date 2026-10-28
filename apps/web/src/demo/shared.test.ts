@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { fromFields, toFields, type SharedBooking } from "./shared.ts";
+import {
+  fromFields,
+  mediaFromFields,
+  mediaToFields,
+  toFields,
+  type SharedBooking,
+  type SharedMedia,
+} from "./shared.ts";
 
 const booking: SharedBooking = {
   id: "b1",
@@ -26,5 +33,30 @@ describe("reservas compartidas de la demo", () => {
     expect(fromFields(sinId)).toBeNull();
     expect(fromFields({ ...toFields(booking), status: {} })).toBeNull();
     expect(fromFields(undefined)).toBeNull();
+  });
+});
+
+describe("fotos compartidas de la demo", () => {
+  const png = "data:image/png;base64,iVBORw0KGgo=";
+  const photo: SharedMedia = {
+    id: "m1",
+    businessSlug: "barberia-el-califa",
+    staffName: "",
+    image: png,
+    removed: "",
+  };
+
+  it("ida y vuelta a campos de Firestore", () => {
+    expect(mediaFromFields(mediaToFields(photo))).toEqual(photo);
+  });
+
+  it("descarta lo que no sea una imagen (cualquiera puede escribir en la colección)", () => {
+    for (const image of [
+      "javascript:alert(1)",
+      "data:text/html;base64,PHNjcmlwdD4=",
+      "data:image/svg+xml;base64,PHN2Zy8+",
+      "https://otra.web/foto.png",
+    ])
+      expect(mediaFromFields(mediaToFields({ ...photo, image }))).toBeNull();
   });
 });

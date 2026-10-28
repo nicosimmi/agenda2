@@ -93,3 +93,95 @@ export async function pushShared(b: SharedBooking) {
   });
   if (!res.ok) throw new Error(`Firestore ${res.status}`);
 }
+
+// --- Fotos compartidas ---
+// Los negocios de la demo suben fotos desde su panel y se ven en cualquier dispositivo. Cada foto es
+// un documento de la colección `media` con la imagen ya reducida como data URL (menos de 1 MB, el
+// límite de un documento de Firestore). Borrar es marcarla (`removed`): las reglas no dejan borrar.
+
+export interface SharedMedia {
+  id: string;
+  businessSlug: string;
+  /** Vacío: foto de la galería del negocio. Con nombre: foto de ese profesional. */
+  staffName: string;
+  image: string;
+  removed: string;
+}
+
+const MEDIA_KEYS = [
+  "id",
+  "businessSlug",
+  "staffName",
+  "image",
+  "removed",
+] as const satisfies readonly (keyof SharedMedia)[];
+
+/** Solo imágenes: cualquiera puede escribir en la colección, así que se vuelve a comprobar al leer. */
+export const IMAGE_DATA_URL = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+
+export const mediaToFields = (m: SharedMedia): Fields =>
+  Object.fromEntries(MEDIA_KEYS.map((k) => [k, { stringValue: m[k] }]));
+
+export function mediaFromFields(fields: Record<string, { stringValue?: string }> | undefined) {
+  const out: Record<string, string> = {};
+  for (const k of MEDIA_KEYS) {
+    const v = fields?.[k]?.stringValue;
+    if (typeof v !== "string") return null;
+    out[k] = v;
+  }
+  if (!IMAGE_DATA_URL.test(out.image!)) return null;
+  return out as unknown as SharedMedia;
+}
+
+/** Fotos visibles de un negocio, de la más antigua a la más nueva (el id empieza por la hora). */
+export async function fetchSharedMedia(businessSlug: string): Promise<SharedMedia[]> {
+  const filter = (field: string, value: string) => ({
+    fieldFilter: { field: { fieldPath: field }, op: "EQUAL", value: { stringValue: value } },
+  });
+  const res = await fetch(`${base()}:runQuery?key=${API_KEY}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: "media" }],
+        where: {
+          compositeFilter: {
+            op: "AND",
+            filters: [filter("businessSlug", businessSlug), filter("removed", "")],
+          },
+        },
+        limit: 40,
+      },
+    }),
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`Firestore ${res.status}`);
+  const rows = (await res.json()) as { document?: { fields?: Record<string, never> } }[];
+  return rows
+    .flatMap((r) => mediaFromFields(r.document?.fields) ?? [])
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
+export async function pushSharedMedia(m: SharedMedia) {
+  const res = await fetch(`${base()}/media/${encodeURIComponent(m.id)}?key=${API_KEY}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ fields: mediaToFields(m) }),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`Firestore ${res.status}`);
+}
+
+/** «Borra» una foto: la marca como retirada (solo se puede cambiar ese campo). */
+export async function removeSharedMedia(id: string) {
+  const res = await fetch(
+    `${base()}/media/${encodeURIComponent(id)}?updateMask.fieldPaths=removed&key=${API_KEY}`,
+    {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ fields: { removed: { stringValue: "1" } } }),
+      signal: AbortSignal.timeout(5000),
+    },
+  );
+  if (!res.ok) throw new Error(`Firestore ${res.status}`);
+}

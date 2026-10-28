@@ -40,14 +40,14 @@ Las peticiones a la API las contesta el propio navegador (`apps/web/src/demo`) c
 
 Cuentas de prueba (contraseña `demo-1234`): `cliente@demo.agendia.test` para reservar, y `<negocio>@demo.agendia.test` (por ejemplo `barberia-el-califa@demo.agendia.test`) para el panel de un negocio.
 
-### Reservas compartidas entre equipos (opcional)
+### Reservas y fotos compartidas entre equipos (opcional)
 
-Sin servidor, cada navegador tiene su propia copia de los datos: una reserva hecha desde otro móvil no aparecería en tu panel. Para que sí aparezca, las reservas se copian además a [Firestore](https://firebase.google.com/docs/firestore) (plan gratuito, sin tarjeta) usando su API REST desde `apps/web/src/demo/shared.ts`, sin dependencias nuevas. Solo viaja lo imprescindible (negocio, profesional, servicio, hora, estado, código y el nombre de pila del cliente); nunca emails, teléfonos ni notas. Los negocios, servicios y cuentas siguen siendo locales.
+Sin servidor, cada navegador tiene su propia copia de los datos: una reserva hecha desde otro móvil no aparecería en tu panel. Para que sí aparezca, las reservas se copian además a [Firestore](https://firebase.google.com/docs/firestore) (plan gratuito, sin tarjeta) usando su API REST desde `apps/web/src/demo/shared.ts`, sin dependencias nuevas. Solo viaja lo imprescindible (negocio, profesional, servicio, hora, estado, código y el nombre de pila del cliente); nunca emails, teléfonos ni notas. También se comparten las fotos que sube un negocio (galería y una por profesional), reducidas en el navegador antes de subirlas. Los negocios, servicios y cuentas siguen siendo locales.
 
 Para activarlo en tu fork:
 
 1. Crea un proyecto en [Firebase](https://console.firebase.google.com/), añade una base de datos Firestore en modo producción y una app web (copia `projectId` y `apiKey`).
-2. En Firestore > Reglas pega el contenido de [`firestore.rules`](firestore.rules): solo permiten crear reservas con la forma esperada, cambiar su estado u hora, y nunca borrar.
+2. En Firestore > Reglas pega el contenido de [`firestore.rules`](firestore.rules): solo permiten crear reservas y fotos con la forma esperada, cambiar el estado de una reserva o retirar una foto, y nunca borrar.
 3. En Google Cloud > Credenciales, restringe la clave de API a tu dominio de GitHub Pages.
 4. En GitHub > Settings > Secrets and variables > Actions > Variables crea `FIREBASE_PROJECT_ID` y `FIREBASE_API_KEY`. Son valores públicos de la web, no secretos.
 
