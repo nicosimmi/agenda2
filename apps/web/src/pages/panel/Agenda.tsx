@@ -29,11 +29,13 @@ const time = (iso: string) =>
 export function Agenda() {
   const [day, setDay] = useState(today);
   const [staffId, setStaffId] = useState("");
+  const [upcoming, setUpcoming] = useState(false);
   const staff = useApi<Staff[]>("/business/staff");
   const services = useApi<Service[]>("/business/services");
   // ponytail: los días se cortan en la hora del navegador; si el negocio está en otra zona, usar business.timezone.
-  const from = new Date(`${day}T00:00`);
-  const to = new Date(from.getTime() + 24 * 3600 * 1000);
+  const from = new Date(`${upcoming ? today() : day}T00:00`);
+  // La API admite como máximo 31 días por consulta.
+  const to = new Date(from.getTime() + (upcoming ? 30 : 1) * 24 * 3600 * 1000);
   const query = new URLSearchParams({ from: from.toISOString(), to: to.toISOString() });
   if (staffId) query.set("staffId", staffId);
   const bookings = useApi<Booking[]>(`/business/bookings?${query}`);
@@ -70,12 +72,25 @@ export function Agenda() {
     <>
       <Section title="Agenda">
         <div className="flex flex-wrap items-end gap-4">
-          <Field
-            label="Día"
-            type="date"
-            value={day}
-            onChange={(e) => e.target.value && setDay(e.target.value)}
-          />
+          <label className="block">
+            <span className="text-sm font-semibold">Ver</span>
+            <select
+              value={upcoming ? "next" : "day"}
+              onChange={(e) => setUpcoming(e.target.value === "next")}
+              className={inputClass}
+            >
+              <option value="day">Un día</option>
+              <option value="next">Próximos 30 días</option>
+            </select>
+          </label>
+          {!upcoming && (
+            <Field
+              label="Día"
+              type="date"
+              value={day}
+              onChange={(e) => e.target.value && setDay(e.target.value)}
+            />
+          )}
           <label className="block">
             <span className="text-sm font-semibold">Profesional</span>
             <select
@@ -93,12 +108,18 @@ export function Agenda() {
           </label>
         </div>
         {bookings.loading && <BlockSkeleton rows={2} />}
-        {bookings.data?.length === 0 && <p className="text-muted">No hay reservas este día.</p>}
+        {bookings.data?.length === 0 && (
+          <p className="text-muted">
+            No hay reservas {upcoming ? "en los próximos 30 días" : "este día"}.
+          </p>
+        )}
         <ul className="divide-y divide-line">
           {bookings.data?.map((b) => (
             <li key={b.id} className="flex flex-wrap items-center gap-3 py-2">
               <span>
                 <strong>
+                  {upcoming &&
+                    `${new Date(b.startsAt).toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" })} `}
                   {time(b.startsAt)}–{time(b.endsAt)}
                 </strong>{" "}
                 {b.serviceName} · {b.customerName} · {b.staffName}{" "}
