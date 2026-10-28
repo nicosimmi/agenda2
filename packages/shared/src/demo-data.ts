@@ -273,3 +273,15 @@ export const DEMO_BUSINESSES: DemoBusiness[] = [
     ],
   },
 ];
+
+/** Nombre de fichero (sin extensión) de las ilustraciones de la demo: `apps/web/public/img/demo`. */
+export const demoImageSlug = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+/** Fotos de la galería de cada negocio de la demo (además de una por profesional). */
+export const DEMO_GALLERY = ["logo", "local", "detalle"] as const;

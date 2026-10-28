@@ -19,6 +19,8 @@ import {
   DEMO_BUSINESSES,
   DEMO_CATEGORIES,
   DEMO_CUSTOMER_EMAIL,
+  DEMO_GALLERY,
+  demoImageSlug,
   DEMO_PASSWORD,
   PROPOSAL_TTL_MINUTES,
   availabilityQuerySchema,
@@ -152,7 +154,7 @@ interface State {
 }
 
 const STORAGE_KEY = "agendia-demo";
-const VERSION = 1;
+const VERSION = 2; // 2: fotos de ejemplo
 
 function seedState(): State {
   const s: State = {
@@ -235,7 +237,40 @@ function seedState(): State {
       s.faq.push({ id: uuid(), businessId, question, answer });
     }
   }
+  s.media = seedMedia(s);
   return s;
+}
+
+/**
+ * Ilustraciones de ejemplo de cada negocio: tres de galería y una por profesional. Son dibujos
+ * generados por código (scripts/gen-demo-images.mjs), sin derechos de terceros. Los ids empiezan
+ * por `seed-`: no se comparten por Firestore.
+ */
+function seedMedia(s: State): Media[] {
+  const dir = `${import.meta.env.BASE_URL}img/demo/`;
+  const media: Media[] = [];
+  for (const b of DEMO_BUSINESSES.filter((x) => x.status !== "draft")) {
+    const business = s.businesses.find((x) => x.slug === b.slug);
+    if (!business) continue;
+    for (const kind of DEMO_GALLERY)
+      media.push({
+        id: `seed-${b.slug}-${kind}`,
+        businessId: business.id,
+        staffId: null,
+        src: `${dir}${b.slug}-${kind}.svg`,
+      });
+    for (const m of b.staff) {
+      const member = s.staff.find((x) => x.businessId === business.id && x.name === m.name);
+      if (member)
+        media.push({
+          id: `seed-${b.slug}-${demoImageSlug(m.name)}`,
+          businessId: business.id,
+          staffId: member.id,
+          src: `${dir}${b.slug}-${demoImageSlug(m.name)}.svg`,
+        });
+    }
+  }
+  return media;
 }
 
 function load(): State {
@@ -581,8 +616,9 @@ route("GET", "/public/businesses/:slug", (p) => {
       id: m.id,
       name: m.name,
       serviceIds: m.serviceIds.filter((id) => active.has(id)),
-      photoId: db.media.find((p) => p.staffId === m.id)?.id ?? null,
-      photoSrc: db.media.find((p) => p.staffId === m.id)?.src ?? null,
+      // La más reciente: una foto subida sustituye a la de ejemplo.
+      photoId: db.media.filter((p) => p.staffId === m.id).at(-1)?.id ?? null,
+      photoSrc: db.media.filter((p) => p.staffId === m.id).at(-1)?.src ?? null,
     }))
     .filter((m) => m.serviceIds.length > 0);
   const visible = new Set(staff.map((m) => m.id));
@@ -1373,7 +1409,7 @@ function pushMediaChanged() {
     pushing = pushing.then(() => removeSharedMedia(id).catch(() => undefined));
   }
   for (const p of db.media) {
-    if (syncedMedia.has(p.id)) continue;
+    if (syncedMedia.has(p.id) || p.id.startsWith("seed-")) continue;
     const business = db.businesses.find((x) => x.id === p.businessId);
     const member = db.staff.find((x) => x.id === p.staffId);
     if (!business) continue;

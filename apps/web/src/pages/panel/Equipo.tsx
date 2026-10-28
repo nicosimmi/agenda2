@@ -42,7 +42,7 @@ export function Equipo() {
           key={member.id}
           member={member}
           services={activeServices}
-          photo={media.data?.find((p) => p.staffId === member.id)}
+          photo={media.data?.filter((p) => p.staffId === member.id).at(-1)}
           reload={staff.reload}
           reloadPhotos={media.reload}
         />

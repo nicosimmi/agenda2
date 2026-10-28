@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img" aria-label="Pista 1"><rect width="400" height="400" fill="#E1EEFF"/>
+      <rect x="70" y="40" width="260" height="320" rx="10" fill="#2457B5"/><rect x="86" y="56" width="228" height="288" fill="#173F86" opacity="0.55"/>
+      <g stroke="#fff" stroke-width="5" fill="none"><rect x="96" y="66" width="208" height="268"/><path d="M96 200 H304 M200 66 V334 M96 142 H304 M96 258 H304"/></g>
+      <rect x="86" y="196" width="228" height="8" fill="#fff" opacity="0.9"/><circle cx="250" cy="120" r="9" fill="#C5E04A"/></svg>

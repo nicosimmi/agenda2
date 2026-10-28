@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="Logotipo de Barbería El Califa"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A2420"/><stop offset="1" stop-color="#4A3B2C"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/>
+    <circle cx="400" cy="230" r="170" fill="#E9D8A6" opacity="0.25"/><circle cx="400" cy="230" r="130" fill="#E9D8A6" opacity="0.18"/>
+    <g transform="translate(400 230) scale(1.05)">
+    <g stroke="#C89B3C" stroke-width="12" stroke-linecap="round" fill="none">
+      <path d="M-58 -96 L52 62"/><path d="M58 -96 L-52 62"/>
+      <circle cx="-62" cy="92" r="26"/><circle cx="62" cy="92" r="26"/>
+    </g><circle r="9" fill="#C89B3C" cy="-12"/></g><text x="400" y="470" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="46" font-weight="700" fill="#E9D8A6">Barbería El</text><text x="400" y="522" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="46" font-weight="700" fill="#E9D8A6">Califa</text>
+    <rect x="300" y="548" width="200" height="5" rx="2.5" fill="#C89B3C"/></svg>
