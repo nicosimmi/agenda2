@@ -243,14 +243,13 @@ export function Landing() {
         <Faq items={FAQ.inicio!} />
       </Page>
 
-      {/* En escritorio el contenido sube 20 rem y deja vacío el final: se recorta el sobrante. */}
-      <div className="-mb-24 md:h-[20rem] md:overflow-hidden">
-        <LampContainer className="min-h-[16rem] bg-ink md:min-h-[34rem]">
+      <div className="-mb-24">
+        <LampContainer className="min-h-[22rem]">
           <motion.div
             initial={{ opacity: 0.5, y: 80 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.8, ease: "easeInOut" }}
-            className="text-center max-md:pt-28"
+            className="text-center"
           >
             <h2 className="pb-4 text-4xl leading-tight font-bold text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] md:text-6xl">
               ¿Listo para abrir tu agenda?

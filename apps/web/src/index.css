@@ -81,12 +81,12 @@ body {
   border-radius: 4px;
 }
 
-/* Animaciones que los componentes de Aceternity esperan en la configuración de Tailwind. */
+/* Animaciones de los componentes de components/ui. */
 @theme {
   --animate-scroll: scroll var(--animation-duration, 40s) var(--animation-direction, forwards)
     linear infinite;
   --animate-aurora: aurora 60s linear infinite;
-  --animate-meteor-effect: meteor 5s linear infinite;
+  --animate-meteor: meteor 6s linear infinite;
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
 
   @keyframes scroll {
@@ -95,27 +95,17 @@ body {
     }
   }
   @keyframes aurora {
-    from {
-      background-position:
-        50% 50%,
-        50% 50%;
-    }
     to {
-      background-position:
-        350% 50%,
-        350% 50%;
+      background-position: 300% 50%;
     }
   }
   @keyframes meteor {
-    0% {
-      transform: rotate(215deg) translateX(0);
+    from {
+      transform: translate(0, 0) rotate(-45deg);
       opacity: 1;
     }
-    70% {
-      opacity: 1;
-    }
-    100% {
-      transform: rotate(215deg) translateX(-500px);
+    to {
+      transform: translate(-420px, 420px) rotate(-45deg);
       opacity: 0;
     }
   }

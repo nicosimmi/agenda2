@@ -42,8 +42,9 @@ test("alta, configuración, publicación y reserva manual", async ({ page }) => 
   await page.getByRole("button", { name: "Añadir", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Lola" })).toBeVisible();
   // El checkbox se actualiza al volver la API, por eso clic + espera en vez de check().
-  await page.getByLabel("Corte").click();
-  await expect(page.getByLabel("Corte")).toBeChecked();
+  const lola = page.locator("section").filter({ hasText: "Lola" }).getByLabel("Corte");
+  await lola.click();
+  await expect(lola).toBeChecked();
   await page.getByRole("button", { name: "Añadir franja" }).click();
   await page.getByRole("button", { name: "Guardar horario" }).click();
   await expect(page.getByText("Guardado")).toBeVisible();

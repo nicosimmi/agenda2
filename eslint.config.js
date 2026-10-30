@@ -5,12 +5,7 @@ import globals from "globals";
 
 export default tseslint.config(
   {
-    ignores: [
-      "**/dist/**",
-      "**/coverage/**",
-      "**/node_modules/**",
-      "apps/web/src/components/ui/**",
-    ],
+    ignores: ["**/dist/**", "**/dist-demo/**", "**/coverage/**", "**/node_modules/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

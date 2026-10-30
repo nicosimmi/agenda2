@@ -1,105 +1,37 @@
-// @ts-nocheck -- código de Aceternity UI (F3-10), con colores ajustados a nuestra paleta; no cumple las opciones estrictas de TypeScript.
-"use client";
-import React from "react";
+import type { ReactNode } from "react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
-export default function LampDemo() {
-  return (
-    <LampContainer>
-      <motion.h1
-        initial={{ opacity: 0.5, y: 100 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{
-          delay: 0.3,
-          duration: 0.8,
-          ease: "easeInOut",
-        }}
-        className="mt-8 bg-gradient-to-br from-slate-300 to-slate-500 py-4 bg-clip-text text-center text-4xl font-medium tracking-tight text-transparent md:text-7xl"
-      >
-        Build lamps <br /> the right way
-      </motion.h1>
-    </LampContainer>
-  );
-}
-
-export const LampContainer = ({
+/** Bloque oscuro con un cono de luz dorada que cae desde el borde superior sobre el contenido. */
+export function LampContainer({
   children,
   className,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
-}) => {
+}) {
   return (
     <div
       className={cn(
-        "relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#1c1917] w-full rounded-md z-0",
+        "bg-ink relative isolate flex min-h-[20rem] w-full flex-col items-center justify-center overflow-hidden px-5 py-20",
         className,
       )}
     >
-      <div className="relative flex w-full flex-1 scale-y-125 items-center justify-center isolate z-0 ">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-full">
         <motion.div
-          initial={{ opacity: 0.5, width: "15rem" }}
-          whileInView={{ opacity: 1, width: "30rem" }}
-          transition={{
-            delay: 0.3,
-            duration: 0.8,
-            ease: "easeInOut",
-          }}
-          style={{
-            backgroundImage: `conic-gradient(var(--conic-position), var(--tw-gradient-stops))`,
-          }}
-          className="absolute inset-auto right-1/2 h-56 overflow-visible w-[30rem] bg-conic from-[#c89b3c] via-transparent to-transparent text-white [--conic-position:from_70deg_at_center_top]"
-        >
-          <div className="absolute  w-[100%] left-0 bg-[#1c1917] h-40 bottom-0 z-20 [mask-image:linear-gradient(to_top,white,transparent)]" />
-          <div className="absolute  w-40 h-[100%] left-0 bg-[#1c1917]  bottom-0 z-20 [mask-image:linear-gradient(to_right,white,transparent)]" />
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0.5, width: "15rem" }}
-          whileInView={{ opacity: 1, width: "30rem" }}
-          transition={{
-            delay: 0.3,
-            duration: 0.8,
-            ease: "easeInOut",
-          }}
-          style={{
-            backgroundImage: `conic-gradient(var(--conic-position), var(--tw-gradient-stops))`,
-          }}
-          className="absolute inset-auto left-1/2 h-56 w-[30rem] bg-conic from-transparent via-transparent to-[#c89b3c] text-white [--conic-position:from_290deg_at_center_top]"
-        >
-          <div className="absolute  w-40 h-[100%] right-0 bg-[#1c1917]  bottom-0 z-20 [mask-image:linear-gradient(to_left,white,transparent)]" />
-          <div className="absolute  w-[100%] right-0 bg-[#1c1917] h-40 bottom-0 z-20 [mask-image:linear-gradient(to_top,white,transparent)]" />
-        </motion.div>
-        <div className="absolute top-1/2 h-48 w-full translate-y-12 scale-x-150 bg-[#1c1917] blur-2xl"></div>
-        <div className="absolute top-1/2 z-50 h-48 w-full bg-transparent opacity-10 backdrop-blur-md"></div>
-        <div className="absolute inset-auto z-50 h-36 w-[28rem] -translate-y-1/2 rounded-full bg-[#c89b3c] opacity-50 blur-3xl"></div>
+          initial={{ opacity: 0.4, width: "14rem" }}
+          whileInView={{ opacity: 1, width: "36rem" }}
+          transition={{ delay: 0.3, duration: 0.8, ease: "easeInOut" }}
+          className="absolute top-0 left-1/2 h-full max-w-full -translate-x-1/2 [background:radial-gradient(ellipse_at_50%_0%,rgba(200,155,60,0.55),transparent_70%)]"
+        />
         <motion.div
           initial={{ width: "8rem" }}
-          whileInView={{ width: "16rem" }}
-          transition={{
-            delay: 0.3,
-            duration: 0.8,
-            ease: "easeInOut",
-          }}
-          className="absolute inset-auto z-30 h-36 w-64 -translate-y-[6rem] rounded-full bg-[#d9b25f] blur-2xl"
-        ></motion.div>
-        <motion.div
-          initial={{ width: "15rem" }}
-          whileInView={{ width: "30rem" }}
-          transition={{
-            delay: 0.3,
-            duration: 0.8,
-            ease: "easeInOut",
-          }}
-          className="absolute inset-auto z-50 h-0.5 w-[30rem] -translate-y-[7rem] bg-[#d9b25f] "
-        ></motion.div>
-
-        <div className="absolute inset-auto z-40 h-44 w-full -translate-y-[12.5rem] bg-[#1c1917] "></div>
+          whileInView={{ width: "24rem" }}
+          transition={{ delay: 0.3, duration: 0.8, ease: "easeInOut" }}
+          className="absolute top-0 left-1/2 h-0.5 max-w-full -translate-x-1/2 bg-[#d9b25f] shadow-[0_0_30px_8px_rgba(217,178,95,0.6)]"
+        />
       </div>
-
-      <div className="relative z-50 flex max-md:-mt-80 max-md:mb-10 flex-col items-center px-5 md:-translate-y-80">
-        {children}
-      </div>
+      <div className="relative flex flex-col items-center">{children}</div>
     </div>
   );
-};
+}

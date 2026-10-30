@@ -129,7 +129,7 @@ test("cliente: busca, reserva creando su cuenta, cancela, y el negocio la ve", a
   await panel.getByLabel("Contraseña").fill("demo-1234");
   await panel.getByRole("button", { name: "Entrar", exact: true }).click();
   await panel.getByRole("link", { name: "Agenda" }).click();
-  await panel.getByLabel("Día").fill(madridDay(booking.startsAt));
+  await panel.getByLabel("Día", { exact: true }).fill(madridDay(booking.startsAt));
   await expect(panel.getByText(name)).toBeVisible();
   await owner.close();
 

@@ -1,83 +1,46 @@
-// @ts-nocheck -- código de Aceternity UI (F3-10), con colores ajustados a nuestra paleta; no cumple las opciones estrictas de TypeScript.
-"use client";
-import React, { SVGProps, useState } from "react";
-import { motion, useMotionValueEvent, useScroll } from "motion/react";
+import { useEffect, useState, type ReactNode } from "react";
+import { motion } from "motion/react";
+import { IconX } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
-export const StickyBanner = ({
+/** Franja fija arriba con un botón para cerrarla. Con `hideOnScroll` se esconde al bajar. */
+export function StickyBanner({
   className,
   children,
   hideOnScroll = false,
 }: {
   className?: string;
-  children: React.ReactNode;
+  children: ReactNode;
   hideOnScroll?: boolean;
-}) => {
-  const [open, setOpen] = useState(true);
-  const { scrollY } = useScroll();
+}) {
+  const [shown, setShown] = useState(true);
 
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    if (hideOnScroll && latest > 40) {
-      setOpen(false);
-    } else {
-      setOpen(true);
-    }
-  });
+  useEffect(() => {
+    if (!hideOnScroll) return;
+    const onScroll = () => setShown(window.scrollY <= 40);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [hideOnScroll]);
 
   return (
     <motion.div
+      initial={{ y: -80, opacity: 0 }}
+      animate={{ y: shown ? 0 : -80, opacity: shown ? 1 : 0 }}
+      transition={{ duration: 0.3 }}
       className={cn(
-        "sticky inset-x-0 top-0 z-40 flex min-h-14 w-full items-center justify-center bg-transparent px-4 py-1",
+        "sticky top-0 z-40 flex min-h-14 w-full items-center justify-center px-10",
         className,
       )}
-      initial={{
-        y: -100,
-        opacity: 0,
-      }}
-      animate={{
-        y: open ? 0 : -100,
-        opacity: open ? 1 : 0,
-      }}
-      transition={{
-        duration: 0.3,
-        ease: "easeInOut",
-      }}
     >
       {children}
-
-      <motion.button
-        initial={{
-          scale: 0,
-        }}
-        animate={{
-          scale: 1,
-        }}
-        className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer"
-        onClick={() => setOpen(!open)}
+      <button
+        type="button"
+        aria-label="Cerrar aviso"
+        onClick={() => setShown(false)}
+        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-white"
       >
-        <CloseIcon className="h-5 w-5 text-white" />
-      </motion.button>
+        <IconX className="size-5" />
+      </button>
     </motion.div>
   );
-};
-
-const CloseIcon = (props: SVGProps<SVGSVGElement>) => {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-      <path d="M18 6l-12 12" />
-      <path d="M6 6l12 12" />
-    </svg>
-  );
-};
+}

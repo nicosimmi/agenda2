@@ -1,181 +1,104 @@
-// @ts-nocheck -- código de Aceternity UI (F3-10), con colores ajustados a nuestra paleta; no cumple las opciones estrictas de TypeScript.
-"use client";
-import { cn } from "@/lib/utils";
-import React, { useState, createContext, useContext } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
+import { NavLink } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { IconMenu2, IconX } from "@tabler/icons-react";
-import { NavLink } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
-interface Links {
+interface SidebarLinkData {
   label: string;
   href: string;
   end?: boolean;
-  icon: React.JSX.Element | React.ReactNode;
+  icon: ReactNode;
 }
 
-interface SidebarContextProps {
-  open: boolean;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  animate: boolean;
+const SidebarContext = createContext<{ open: boolean; setOpen: (v: boolean) => void } | null>(null);
+
+function useSidebar() {
+  const ctx = useContext(SidebarContext);
+  if (!ctx) throw new Error("Los enlaces del menú lateral van dentro de <Sidebar>");
+  return ctx;
 }
 
-const SidebarContext = createContext<SidebarContextProps | undefined>(undefined);
+/** Guarda si el menú está abierto: se despliega al pasar el puntero (escritorio) o con el botón (móvil). */
+export function Sidebar({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return <SidebarContext.Provider value={{ open, setOpen }}>{children}</SidebarContext.Provider>;
+}
 
-export const useSidebar = () => {
-  const context = useContext(SidebarContext);
-  if (!context) {
-    throw new Error("useSidebar must be used within a SidebarProvider");
-  }
-  return context;
-};
-
-export const SidebarProvider = ({
-  children,
-  open: openProp,
-  setOpen: setOpenProp,
-  animate = true,
-}: {
-  children: React.ReactNode;
-  open?: boolean;
-  setOpen?: React.Dispatch<React.SetStateAction<boolean>>;
-  animate?: boolean;
-}) => {
-  const [openState, setOpenState] = useState(false);
-
-  const open = openProp !== undefined ? openProp : openState;
-  const setOpen = setOpenProp !== undefined ? setOpenProp : setOpenState;
-
-  return (
-    <SidebarContext.Provider value={{ open, setOpen, animate: animate }}>
-      {children}
-    </SidebarContext.Provider>
-  );
-};
-
-export const Sidebar = ({
-  children,
-  open,
-  setOpen,
-  animate,
-}: {
-  children: React.ReactNode;
-  open?: boolean;
-  setOpen?: React.Dispatch<React.SetStateAction<boolean>>;
-  animate?: boolean;
-}) => {
-  return (
-    <SidebarProvider open={open} setOpen={setOpen} animate={animate}>
-      {children}
-    </SidebarProvider>
-  );
-};
-
-export const SidebarBody = (props: React.ComponentProps<typeof motion.div>) => {
-  return (
-    <>
-      <DesktopSidebar {...props} />
-      <MobileSidebar {...(props as React.ComponentProps<"div">)} />
-    </>
-  );
-};
-
-export const DesktopSidebar = ({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<typeof motion.div>) => {
-  const { open, setOpen, animate } = useSidebar();
-  return (
-    <>
-      <motion.div
-        className={cn(
-          "h-full px-4 py-4 hidden  md:flex md:flex-col bg-neutral-100 dark:bg-neutral-800 w-[300px] shrink-0",
-          className,
-        )}
-        animate={{
-          width: animate ? (open ? "300px" : "60px") : "300px",
-        }}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        {...props}
-      >
-        {children}
-      </motion.div>
-    </>
-  );
-};
-
-export const MobileSidebar = ({ className, children, ...props }: React.ComponentProps<"div">) => {
+/** Barra lateral estrecha en escritorio y barra superior con menú a pantalla completa en móvil. */
+export function SidebarBody({ className, children }: { className?: string; children: ReactNode }) {
   const { open, setOpen } = useSidebar();
   return (
     <>
-      <div
-        className={cn(
-          "h-10 px-4 py-4 flex flex-row md:hidden  items-center justify-between bg-[#1c1917] w-full",
-        )}
-        {...props}
+      <motion.aside
+        animate={{ width: open ? 300 : 60 }}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        className={cn("hidden shrink-0 flex-col px-4 py-4 md:flex", className)}
       >
-        <div className="flex justify-end z-20 w-full">
-          <IconMenu2 className="text-stone-200" onClick={() => setOpen(!open)} />
-        </div>
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              initial={{ x: "-100%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "-100%", opacity: 0 }}
-              transition={{
-                duration: 0.3,
-                ease: "easeInOut",
-              }}
-              className={cn(
-                "fixed h-full w-full inset-0 bg-white dark:bg-neutral-900 p-10 z-[100] flex flex-col justify-between",
-                className,
-              )}
-            >
-              <div
-                className="absolute right-10 top-10 z-50 text-stone-200"
-                onClick={() => setOpen(!open)}
-              >
-                <IconX />
-              </div>
-              {children}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {children}
+      </motion.aside>
+
+      <div className="bg-ink flex h-10 w-full items-center justify-end px-4 md:hidden">
+        <button
+          type="button"
+          aria-label="Abrir menú"
+          onClick={() => setOpen(true)}
+          className="cursor-pointer text-stone-200"
+        >
+          <IconMenu2 />
+        </button>
       </div>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className={cn(
+              "fixed inset-0 z-[100] flex flex-col justify-between p-10 md:hidden",
+              className,
+            )}
+          >
+            <button
+              type="button"
+              aria-label="Cerrar menú"
+              onClick={() => setOpen(false)}
+              className="absolute top-10 right-10 cursor-pointer text-stone-200"
+            >
+              <IconX />
+            </button>
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
-};
+}
 
-export const SidebarLink = ({ link, className, ...props }: { link: Links; className?: string }) => {
-  const { open, animate, setOpen } = useSidebar();
+export function SidebarLink({ link, className }: { link: SidebarLinkData; className?: string }) {
+  const { open, setOpen } = useSidebar();
   return (
     <NavLink
       to={link.href}
+      end={link.end ?? false}
       aria-label={link.label}
-      end={link.end}
       onClick={() => setOpen(false)}
       className={({ isActive }) =>
-        cn(
-          "flex items-center justify-start gap-2  group/sidebar py-2",
-          className,
-          isActive && "text-gold",
-        )
+        cn("group/link flex items-center gap-2 py-2", className, isActive && "text-gold")
       }
-      {...props}
     >
       {link.icon}
-
-      <motion.span
-        animate={{
-          display: animate ? (open ? "inline-block" : "none") : "inline-block",
-          opacity: animate ? (open ? 1 : 0) : 1,
-        }}
-        className="text-inherit text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"
+      <span
+        className={cn(
+          "inline-block text-sm whitespace-pre transition-[opacity,transform] duration-150 group-hover/link:translate-x-1",
+          // En escritorio el texto solo se ve con la barra desplegada; en el menú móvil siempre.
+          !open && "md:hidden",
+        )}
       >
         {link.label}
-      </motion.span>
+      </span>
     </NavLink>
   );
-};
+}

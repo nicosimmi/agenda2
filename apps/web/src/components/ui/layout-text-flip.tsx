@@ -1,59 +1,45 @@
-// @ts-nocheck -- código de Aceternity UI (F3-10), con colores ajustados a nuestra paleta; no cumple las opciones estrictas de TypeScript.
-"use client";
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 
-export const LayoutTextFlip = ({
-  text = "Build Amazing",
-  words = ["Landing Pages", "Component Blocks", "Page Sections", "3D Shaders"],
+/** Frase fija seguida de una palabra que cambia cada pocos segundos. */
+export function LayoutTextFlip({
+  text,
+  words,
   duration = 3000,
 }: {
   text: string;
   words: string[];
   duration?: number;
-}) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+}) {
+  const [i, setI] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % words.length);
-    }, duration);
-
-    return () => clearInterval(interval);
-  }, []);
+    const timer = setInterval(() => setI((n) => (n + 1) % words.length), duration);
+    return () => clearInterval(timer);
+  }, [words.length, duration]);
 
   return (
     <>
-      <motion.span
-        layoutId="subtext"
-        className="text-2xl font-bold tracking-tight drop-shadow-lg md:text-4xl"
-      >
+      <motion.span layoutId="flip-text" className="text-2xl font-bold tracking-tight md:text-4xl">
         {text}
       </motion.span>
-
       <motion.span
         layout
-        className="relative w-fit overflow-hidden rounded-md border border-transparent bg-white px-4 py-2 font-sans text-2xl font-bold tracking-tight text-black shadow-sm ring shadow-black/10 ring-black/10 drop-shadow-lg md:text-4xl dark:bg-neutral-900 dark:text-white dark:shadow-sm dark:ring-1 dark:shadow-white/10 dark:ring-white/10"
+        className="bg-surface text-fg border-line relative w-fit overflow-hidden rounded-md border px-4 py-2 text-2xl font-bold tracking-tight shadow-sm md:text-4xl"
       >
         <AnimatePresence mode="popLayout">
           <motion.span
-            key={currentIndex}
-            initial={{ y: -40, filter: "blur(10px)" }}
-            animate={{
-              y: 0,
-              filter: "blur(0px)",
-            }}
-            exit={{ y: 50, filter: "blur(10px)", opacity: 0 }}
-            transition={{
-              duration: 0.5,
-            }}
-            className={cn("inline-block whitespace-nowrap")}
+            key={i}
+            initial={{ y: -40, opacity: 0, filter: "blur(8px)" }}
+            animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+            exit={{ y: 40, opacity: 0, filter: "blur(8px)" }}
+            transition={{ duration: 0.45 }}
+            className="inline-block whitespace-nowrap"
           >
-            {words[currentIndex]}
+            {words[i]}
           </motion.span>
         </AnimatePresence>
       </motion.span>
     </>
   );
-};
+}
