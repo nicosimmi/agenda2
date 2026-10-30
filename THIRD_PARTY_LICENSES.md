@@ -44,7 +44,7 @@ fast-sha256 1.3.0
 
 - **Tipografía Kulim Park** (`apps/web/public/fonts`): SIL Open Font License 1.1, copyright de The Kulim Park Project Authors. El texto de la licencia está en `apps/web/public/fonts/OFL.txt`.
 - **Texturas de la Tierra** (`apps/web/public/textures`): imagen Blue Marble de la NASA (dominio público; la NASA no avala este proyecto) y mapa de relieve que incluye en sus ejemplos el proyecto [three-globe](https://github.com/vasturiano/three-globe) (licencia MIT).
-- **Componentes de interfaz** (`apps/web/src/components/ui`): código copiado de [Aceternity UI](https://ui.aceternity.com) y adaptado. Se rigen por la [licencia de Aceternity](https://ui.aceternity.com/licence).
+- **Componentes de interfaz** (`apps/web/src/components/ui`): escritos para este proyecto sobre las librerías de la tabla de arriba. No contienen código de terceros.
 - **Iconos**: [Tabler Icons](https://tabler.io/icons) (MIT).
 - **Ilustraciones de la demo** (`apps/web/public/img/demo`): dibujos vectoriales generados por código (`scripts/gen-demo-images.mjs`) para este proyecto, sin material de terceros.
 - **Captura del panel** (`apps/web/public/img/panel-agenda.png`): captura propia con datos ficticios.

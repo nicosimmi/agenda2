@@ -144,7 +144,7 @@ pnpm --filter @agendia/web dev   # http://localhost:5173 (con la API en marcha)
 
 La portada está en `/`, la búsqueda en `/buscar`, la ficha de un negocio en `/n/:slug`, el acceso en `/entrar`, el alta de cliente en `/registro`, el alta de negocio en `/alta`, las reservas del cliente en `/mis-reservas` y el panel en `/panel`. El interruptor sol/luna cambia el tema y la tecla `/` abre el buscador rápido. En desarrollo Vite reenvía `/api` a la API, así que la cookie de sesión es del mismo origen. Para verla desde el móvil: `pnpm exec vite --host` dentro de `apps/web`, y añade el origen de la IP del PC a `WEB_ORIGIN`.
 
-Los componentes visuales de `apps/web/src/components/ui` son de [Aceternity UI](https://ui.aceternity.com) (código abierto que se copia al repo, no una dependencia), con los colores adaptados a la paleta. Llevan `@ts-nocheck` y están fuera del lint. La imagen del tablet de la portada es una captura real del panel (`public/img/panel-agenda.png`).
+Los componentes visuales de `apps/web/src/components/ui` (menú, tarjetas 3D, fondos animados, globo…) están escritos para el proyecto con React, Motion y three.js. La imagen del tablet de la portada es una captura real del panel (`public/img/panel-agenda.png`).
 
 ## Servidor MCP
 

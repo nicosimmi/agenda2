@@ -449,4 +449,5 @@ La demo es pública, así que todo lo que se sirve tiene que ser propio o de lic
 2. **Nada de recursos externos en tiempo de ejecución.** Tipografía y texturas del globo están alojadas en el propio sitio. Se quitó un componente sin usar que apuntaba a una imagen de Aceternity.
 3. **Privacidad al día.** Se reescribió la página de Privacidad: ahora dice qué se guarda en el navegador, qué va a Firestore (Google), que es público y cómo pedir que se retire algo, y aclara que el asistente de la demo es un guion y no una IA.
 4. **Aviso al subir fotos** y `THIRD_PARTY_LICENSES.md` con las licencias, el texto OFL de la tipografía y los créditos de las texturas.
-5. **Pendiente de decisión del desarrollador:** licencia del código del repositorio y confirmar con Aceternity que sus componentes gratuitos se pueden publicar en un repositorio público.
+5. **Componentes propios.** No se pudo confirmar que la licencia de Aceternity permita publicar sus componentes en un repositorio público, así que se reescribieron los 18 que se usaban (`components/ui`) con el mismo uso y aspecto parecido, sin copiar su código. Ya no hay excepción de lint ni `@ts-nocheck`; el componente sin uso `hover-border-gradient` se borró.
+6. **Pendiente de decisión del desarrollador:** licencia del código del repositorio.
