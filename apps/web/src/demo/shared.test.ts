@@ -34,6 +34,16 @@ describe("reservas compartidas de la demo", () => {
     expect(fromFields({ ...toFields(booking), status: {} })).toBeNull();
     expect(fromFields(undefined)).toBeNull();
   });
+
+  it("descarta estados, orígenes y fechas inventados", () => {
+    const con = (k: string, v: string) =>
+      fromFields({ ...toFields(booking), [k]: { stringValue: v } });
+    expect(con("status", "hackeada")).toBeNull();
+    expect(con("source", "otro")).toBeNull();
+    expect(con("startsAt", "no es fecha")).toBeNull();
+    expect(con("expiresAt", "ayer")).toBeNull();
+    expect(con("expiresAt", "2026-11-02T09:10:00.000Z")).not.toBeNull();
+  });
 });
 
 describe("fotos compartidas de la demo", () => {

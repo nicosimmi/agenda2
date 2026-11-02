@@ -45,6 +45,9 @@ const KEYS = [
   "expiresAt",
 ] as const satisfies readonly (keyof SharedBooking)[];
 
+const STATUSES = ["pending", "confirmed", "cancelled", "completed", "no_show", "expired"];
+const SOURCES = ["web", "agent", "business"];
+
 type Fields = Record<string, { stringValue: string }>;
 
 export const toFields = (b: SharedBooking): Fields =>
@@ -58,6 +61,16 @@ export function fromFields(fields: Record<string, { stringValue?: string }> | un
     if (typeof v !== "string") return null;
     out[k] = v;
   }
+  // Los datos los puede escribir cualquiera: se descartan los de estado, origen o fecha inventados.
+  const date = (v: string) => Number.isFinite(Date.parse(v));
+  if (
+    !STATUSES.includes(out.status!) ||
+    !SOURCES.includes(out.source!) ||
+    !date(out.startsAt!) ||
+    !date(out.endsAt!) ||
+    (out.expiresAt !== "" && !date(out.expiresAt!))
+  )
+    return null;
   return out as unknown as SharedBooking;
 }
 

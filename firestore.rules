@@ -21,19 +21,23 @@ service cloud.firestore {
         && request.resource.data.staffName is string && request.resource.data.staffName.size() < 80
         && request.resource.data.serviceName is string && request.resource.data.serviceName.size() < 120
         && request.resource.data.code is string && request.resource.data.code.size() <= 12
-        && request.resource.data.startsAt is string && request.resource.data.startsAt.size() <= 30
-        && request.resource.data.endsAt is string && request.resource.data.endsAt.size() <= 30
+        && request.resource.data.startsAt is string && request.resource.data.startsAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$')
+        && request.resource.data.endsAt is string && request.resource.data.endsAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$')
         && request.resource.data.status in ['pending', 'confirmed', 'cancelled', 'completed', 'no_show', 'expired']
         && request.resource.data.source in ['web', 'agent', 'business']
         && request.resource.data.customerName is string && request.resource.data.customerName.size() <= 40
-        && request.resource.data.expiresAt is string && request.resource.data.expiresAt.size() <= 30;
+        && request.resource.data.expiresAt is string
+        && (request.resource.data.expiresAt == '' || request.resource.data.expiresAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$'));
 
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['status', 'startsAt', 'endsAt', 'staffName', 'expiresAt'])
         && request.resource.data.status in ['pending', 'confirmed', 'cancelled', 'completed', 'no_show', 'expired']
-        && request.resource.data.startsAt.size() <= 30
-        && request.resource.data.endsAt.size() <= 30
-        && request.resource.data.staffName.size() < 80;
+        && request.resource.data.startsAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$')
+        && request.resource.data.endsAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$')
+        && (request.resource.data.expiresAt == '' || request.resource.data.expiresAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$'))
+        && request.resource.data.staffName.size() < 80
+        // Una reserva ya cancelada, completada o caducada no vuelve a abrirse.
+        && resource.data.status in ['pending', 'confirmed'];
 
       allow delete: if false;
     }
