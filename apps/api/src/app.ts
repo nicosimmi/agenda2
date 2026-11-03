@@ -18,6 +18,7 @@ import { customerRoutes } from "./routes/customer.ts";
 import { internalRoutes } from "./routes/internal.ts";
 import { publicRoutes } from "./routes/public.ts";
 import { tokenRoutes } from "./routes/tokens.ts";
+import { securityEvent } from "./security.ts";
 import { SESSION_COOKIE, findSessionUser, type SessionUser } from "./session.ts";
 import { findTokenUser } from "./tokens.ts";
 import type { TenantContext } from "./tenant.ts";
@@ -42,6 +43,8 @@ export interface AppConfig {
   webOrigins: string[];
   /** Cookie solo por HTTPS; en producción, siempre. */
   secureCookies: boolean;
+  /** Rechaza peticiones que no llegaron por HTTPS (según X-Forwarded-Proto del proxy de confianza). */
+  forceHttps?: boolean;
   /**
    * IP o CIDR de los proxies inversos de confianza delante de la API (vacío = ninguno). Sin esto,
    * detrás de un proxy todas las peticiones tendrían su IP y el rate limiting sería global.
@@ -75,7 +78,9 @@ export async function buildApp(db: Db, config: AppConfig) {
     for (const m of methods) if (m !== "HEAD") app.routeList.push(`${m} ${route.url}`);
   });
 
-  await app.register(helmet);
+  await app.register(helmet, {
+    hsts: { maxAge: 31536000, includeSubDomains: true },
+  });
   await app.register(cors, { origin: config.webOrigins, credentials: true });
   await app.register(cookie);
   await app.register(rateLimit, {
@@ -89,6 +94,10 @@ export async function buildApp(db: Db, config: AppConfig) {
   });
 
   app.addHook("onRequest", async (req) => {
+    if (config.forceHttps && req.protocol !== "https" && req.url !== "/health") {
+      securityEvent(req, "http_rechazado");
+      throw new AppError(400, "BAD_REQUEST", "Esta API solo acepta HTTPS");
+    }
     const bearer = req.headers.authorization;
     // Una petición se autentica de una sola forma: con token, la cookie se ignora.
     const token = bearer === undefined ? req.cookies[SESSION_COOKIE] : undefined;
@@ -98,6 +107,7 @@ export async function buildApp(db: Db, config: AppConfig) {
     if (!SAFE_METHODS.has(req.method)) {
       const origin = req.headers.origin;
       if (origin ? !config.webOrigins.includes(origin) : token !== undefined) {
+        securityEvent(req, "csrf_rechazado", { origin: origin ?? null });
         throw new AppError(403, "CSRF", "Origen de la petición no permitido");
       }
     }
@@ -106,7 +116,10 @@ export async function buildApp(db: Db, config: AppConfig) {
       // un cliente MCP con el token caducado tiene que enterarse.
       const match = /^Bearer (\S+)$/i.exec(bearer);
       const found = match ? await findTokenUser(db, match[1]!) : null;
-      if (!found) throw new AppError(401, "UNAUTHORIZED", "Token no válido, caducado o revocado");
+      if (!found) {
+        securityEvent(req, "token_invalido");
+        throw new AppError(401, "UNAUTHORIZED", "Token no válido, caducado o revocado");
+      }
       req.user = found.user;
       req.scopes = found.scopes;
       return;
@@ -123,8 +136,14 @@ export async function buildApp(db: Db, config: AppConfig) {
       const where = issue?.path.length ? `${issue.path.join(".")}: ` : "";
       return send(400, "VALIDATION_ERROR", `${where}${issue?.message ?? "Datos no válidos"}`);
     }
-    if (err instanceof AppError) return send(err.statusCode, err.code, err.message);
-    if (err.statusCode === 429) return send(429, "RATE_LIMITED", err.message);
+    if (err instanceof AppError) {
+      if (err.code === "RATE_LIMITED") securityEvent(req, "limite_superado");
+      return send(err.statusCode, err.code, err.message);
+    }
+    if (err.statusCode === 429) {
+      securityEvent(req, "limite_superado");
+      return send(429, "RATE_LIMITED", err.message);
+    }
     if (err.statusCode && err.statusCode < 500) {
       return send(err.statusCode, "BAD_REQUEST", err.message);
     }

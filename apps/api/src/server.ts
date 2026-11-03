@@ -2,6 +2,7 @@ import { buildApp } from "./app.ts";
 import { agentConfigFromEnv } from "./agent/config.ts";
 import { createDb } from "./db/client.ts";
 import { startOutboxWorker } from "./outbox.ts";
+import { productionProblems } from "./security.ts";
 
 const list = (value = "") =>
   value
@@ -9,6 +10,13 @@ const list = (value = "") =>
     .map((s) => s.trim())
     .filter(Boolean);
 
+const production = process.env.NODE_ENV === "production";
+if (production) {
+  const problems = productionProblems(process.env);
+  if (problems.length > 0) {
+    throw new Error(`Entorno de producción inseguro: ${problems.join("; ")}`);
+  }
+}
 const { db } = createDb();
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } = process.env;
 if (Boolean(GOOGLE_CLIENT_ID) !== Boolean(GOOGLE_CLIENT_SECRET && GOOGLE_REDIRECT_URI)) {
@@ -19,7 +27,8 @@ if (Boolean(GOOGLE_CLIENT_ID) !== Boolean(GOOGLE_CLIENT_SECRET && GOOGLE_REDIREC
 const app = await buildApp(db, {
   webOrigins: list(process.env.WEB_ORIGIN ?? "http://localhost:5173"),
   trustedProxies: list(process.env.TRUSTED_PROXIES),
-  secureCookies: process.env.NODE_ENV === "production",
+  secureCookies: production,
+  forceHttps: production,
   agent: agentConfigFromEnv(process.env),
   automationSecret: process.env.AUTOMATION_SECRET,
   google: GOOGLE_CLIENT_ID

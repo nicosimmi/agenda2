@@ -7,6 +7,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { businessMembers, businesses, categories, users } from "../db/schema.ts";
 import { AppError, pgConstraint, pgErrorCode } from "../errors.ts";
 import { requireRole, userOf } from "../guards.ts";
+import { securityEvent } from "../security.ts";
 import {
   SESSION_COOKIE,
   deleteExpiredSessions,
@@ -110,6 +111,7 @@ export async function authRoutes(app: FastifyInstance) {
       // Ojo: en este plugin isAllowed significa "está en la allowList", no "queda cupo".
       const perAccount = await loginPerAccount(req);
       if (!perAccount.isAllowed && perAccount.isExceeded) {
+        securityEvent(req, "login_bloqueado_por_cuenta", { email: input.email });
         throw new AppError(
           429,
           "RATE_LIMITED",
@@ -118,7 +120,10 @@ export async function authRoutes(app: FastifyInstance) {
       }
       const [user] = await db.select().from(users).where(eq(users.email, input.email));
       const ok = await verify(user?.passwordHash ?? (await dummyHash), input.password);
-      if (!user || !ok) throw new AppError(401, "UNAUTHORIZED", "Email o contraseña incorrectos");
+      if (!user || !ok) {
+        securityEvent(req, "login_fallido", { email: input.email });
+        throw new AppError(401, "UNAUTHORIZED", "Email o contraseña incorrectos");
+      }
 
       await startSession(req, reply, user.id);
       await deleteExpiredSessions(db);
