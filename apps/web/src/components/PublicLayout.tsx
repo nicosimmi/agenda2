@@ -37,8 +37,8 @@ export function PublicLayout() {
       </a>
       <StickyBanner className="bg-ink" hideOnScroll>
         <p className="text-sm text-white">
-          <span className="text-gold font-bold">Versión de demostración.</span> Los negocios y las
-          reservas son ficticios.
+          <span className="text-gold font-bold">Proyecto de portfolio.</span> Demo con datos
+          ficticios; el asistente sigue un guion porque un modelo real necesita una API de pago.
         </p>
       </StickyBanner>
       <SiteNav onSearch={() => setSearching(true)} />

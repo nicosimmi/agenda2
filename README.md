@@ -6,6 +6,29 @@ Plataforma de reservas para negocios con cita (barberías, fisioterapia, pádel,
 
 ![Panel de agenda de un negocio](apps/web/public/img/panel-agenda.png)
 
+## Qué es y qué no es
+
+AgendIA es un **proyecto personal de portfolio**: lo construí para practicar y enseñar cómo trabajo de principio a fin. No es un producto, no se vende y no tiene usuarios reales. Todos los negocios, reservas y personas de la demo son ficticios.
+
+**No es solo un front.** La demo de GitHub Pages es una versión sin servidor para que se pueda probar con un clic, pero el repositorio contiene un sistema completo:
+
+```mermaid
+flowchart LR
+  Web["Web (React + Vite)"] -->|cookie de sesión| API["API (Fastify + Zod)"]
+  Agente["Cliente MCP / asistente"] -->|token con permisos| MCP["Servidor MCP"]
+  MCP --> API
+  API --> DB[("PostgreSQL + Drizzle")]
+  API -->|outbox firmado HMAC| N8N["n8n (emails, recordatorios)"]
+  API -->|LlmProvider| LLM["Modelo de lenguaje"]
+```
+
+- **Backend:** API REST con Fastify y validación Zod, sesiones propias, tokens con permisos, CSRF, rate limiting y registro de eventos sospechosos.
+- **Base de datos:** PostgreSQL con migraciones, claves foráneas compuestas para aislar negocios, restricciones contra reservas solapadas e idempotencia.
+- **IA:** asistente que solo lee y propone, servidor MCP propio y 51 evaluaciones.
+- **Infraestructura:** Docker Compose (PostgreSQL, Mailpit, n8n), CI en GitHub Actions con tests de integración sobre Postgres real y pruebas E2E con Playwright.
+
+**Sobre la IA de la demo.** El asistente está programado, configurado y probado, pero un modelo de lenguaje en producción necesita una API de pago, y este proyecto está hecho para no costar dinero. Por eso la demo usa un guion fijo. Con una clave en el `.env`, el mismo código llama al modelo real.
+
 ## Por qué lo hice
 
 Quería resolver un problema concreto: cómo dejar que un modelo de lenguaje actúe sobre datos reales sin fiarse de él. Un asistente que reserva citas es un buen ejemplo, porque un error cuesta dinero y tiempo a alguien, y porque cualquier texto que escribe un negocio (su descripción, sus FAQ) puede intentar darle órdenes al modelo.
