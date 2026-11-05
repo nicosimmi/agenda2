@@ -2,10 +2,10 @@
 
 Decisiones técnicas no triviales. Formato: contexto, decisión, alternativas. Las decisiones por defecto D1–D16 están en `docs/SPEC.md` §19.
 
-## F0-1. Proyecto fuera de OneDrive (`C:\dev\agenda2`)
+## F0-1. Proyecto fuera de OneDrive (`C:\dev\AgendIA`)
 
 - **Contexto:** el proyecto estaba en una carpeta sincronizada con OneDrive. `node_modules` (miles de enlaces de pnpm) y los volúmenes de Docker dan bloqueos y lentitud con la sincronización.
-- **Decisión:** trabajar en `C:\dev\agenda2`.
+- **Decisión:** trabajar en `C:\dev\AgendIA`.
 - **Alternativas:** quedarse en OneDrive y excluir carpetas (frágil).
 
 ## F0-2. pnpm 10.34.6 fijado con `packageManager`
@@ -410,7 +410,7 @@ El desarrollador quiere una URL pública gratis con GitHub. Pages solo sirve fic
 - Los datos del seed se movieron a `packages/shared/src/demo-data.ts` para que los usen el seed de Postgres y la demo. Los huecos se calculan con `computeAvailability` de `packages/core` y los cuerpos se validan con los esquemas de `shared`.
 - El estado vive en `localStorage` (uno por visitante). Las contraseñas de las cuentas de prueba se comparan en claro: son datos ficticios que no salen del navegador.
 - El asistente sigue un guion fijo como `LLM_PROVIDER=demo`, con tarjeta y botón «Confirmar». Los tokens MCP responden que no hay servidor en la demo.
-- `VITE_BASE` pone la web bajo `/agenda2/`, el router usa esa base y `404.html` es una copia de `index.html` para que funcionen las URL profundas.
+- `VITE_BASE` pone la web bajo `/AgendIA/`, el router usa esa base y `404.html` es una copia de `index.html` para que funcionen las URL profundas.
 - No es seguridad real: cualquiera puede leer o cambiar su propio `localStorage`. Da igual porque cada visitante solo ve su copia de datos ficticios.
 
 ## F9-1. Acceso con Google (OpenID Connect)

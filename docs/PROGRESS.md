@@ -31,7 +31,7 @@
 ## Publicación (2026-10-08)
 
 - Código subido a GitHub: `main`, ramas de las fases 3 a 8 y etiquetas `fase-3` a `fase-8`.
-- Demo pública en GitHub Pages (https://nicosimmi.github.io/agenda2/), sin servidor: F8-4. Probada en local con el mismo build (base `/agenda2/`) y Playwright: búsqueda, ficha, reserva con el asistente y Confirmar, recarga con la sesión y panel del negocio.
+- Demo pública en GitHub Pages (https://nicosimmi.github.io/AgendIA/), sin servidor: F8-4. Probada en local con el mismo build (base `/AgendIA/`) y Playwright: búsqueda, ficha, reserva con el asistente y Confirmar, recarga con la sesión y panel del negocio.
 
 ## Pendiente de la Fase 8 (a decidir con el desarrollador)
 

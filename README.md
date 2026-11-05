@@ -2,7 +2,7 @@
 
 Plataforma de reservas para negocios con cita (barberías, fisioterapia, pádel, estética). Los negocios se dan de alta, y los clientes los buscan y reservan con una interfaz de toda la vida o hablando con un asistente de IA.
 
-**[Probar la demo](https://nicosimmi.github.io/agenda2/)**. Funciona entera en el navegador, sin servidor y sin registrarte.
+**[Probar la demo](https://nicosimmi.github.io/AgendIA/)**. Funciona entera en el navegador, sin servidor y sin registrarte.
 
 ![Panel de agenda de un negocio](apps/web/public/img/panel-agenda.png)
 
